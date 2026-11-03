@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ziggy</title>
+<title>Bladerunner visualiser</title>
 <style>
   @font-face { font-family: Orbitron; src: url(fonts/orbitron.woff2) format("woff2"); font-weight: 400 900; }
   @font-face { font-family: "Share Tech Mono"; src: url(fonts/share-tech-mono.woff2) format("woff2"); }
@@ -32,7 +32,7 @@
     .full .words { width: 100%; flex: 1; justify-content: flex-start; }
   }
 
-  /* The HUD, after the ziggy dashboard card. */
+  /* The HUD, after the ziggy dashboard card it was first made from. */
   .hud-wrap { position: relative; border-radius: 50%; transform: scale(calc(1 + var(--lv) * 0.035)); }
   .hud-wrap::before {
     content: ""; position: absolute; inset: -1.5%; border-radius: 50%;
@@ -148,17 +148,17 @@
         <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
         <div class="hl top"></div><div class="hl bot"></div>
         <div class="label clock" id="clock">00:00:00</div>
-        <div class="label micro al">ZIGGY&middot;CORE</div>
-        <div class="label micro ar">STARDUST</div>
+        <div class="label micro al">NEXUS&middot;CORE</div>
+        <div class="label micro ar">REPLICANT</div>
         <div class="label panel left"><span class="l">VOICE</span><span class="v" id="lv">0%</span><span class="l">MODE</span><span class="v" id="mode">LISTEN</span></div>
         <div class="label panel right"><span class="l">DATE</span><span class="v" id="date">----</span><span class="l">STATUS</span><span class="v ok">ONLINE</span></div>
         <div class="ebar"><div class="efill"></div></div>
-        <div class="label status" id="status">ZIGGY ONLINE</div>
+        <div class="label status" id="status">PRIS ONLINE</div>
       </div>
     </div>
   </div>
   <div class="words" id="words">
-    <div class="heading">ZIGGY</div>
+    <div class="heading">PRIS</div>
     <div class="said" id="said" hidden></div>
     <div class="answer" id="answer" hidden></div>
     <ul class="tools" id="tools" hidden></ul>
@@ -174,8 +174,8 @@
   layout.className = mode === 'docked' ? 'dock' : 'stage full';
   if (mode === 'docked') document.getElementById('backdrop').hidden = true;
 
-  // Clips: the Ziggy loops. With more than one, they change with a glitch every few seconds.
-  var CLIPS = ['ziggy'];
+  // Clips: the Pris loops. With more than one, they change with a glitch every few seconds.
+  var CLIPS = ['pris'];
   var INTERVAL = 3000;
   var canvas = document.getElementById('video'), ctx = canvas.getContext('2d');
   var glitch = document.getElementById('glitch'), gctx = glitch.getContext('2d');
@@ -422,7 +422,7 @@
   // The words: what was said, the answer as it arrives and the actions taken.
   var said = document.getElementById('said'), answer = document.getElementById('answer'), tools = document.getElementById('tools');
   var words = document.getElementById('words');
-  var MODES = { listening: ['LISTEN', 'ZIGGY ONLINE · LISTENING'], thinking: ['PROCESS', 'ZIGGY ONLINE · PROCESSING'], answering: ['RESPOND', 'ZIGGY ONLINE · RESPONDING'], done: ['STANDBY', 'ZIGGY ONLINE · STANDBY'] };
+  var MODES = { listening: ['LISTEN', 'PRIS ONLINE · LISTENING'], thinking: ['PROCESS', 'PRIS ONLINE · PROCESSING'], answering: ['RESPOND', 'PRIS ONLINE · RESPONDING'], done: ['STANDBY', 'PRIS ONLINE · STANDBY'] };
 
   // Shrinks the words until the latest of them fit beside the HUD.
   function fit() {

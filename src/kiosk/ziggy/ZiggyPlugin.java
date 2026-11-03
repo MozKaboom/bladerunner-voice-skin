@@ -12,8 +12,8 @@ import me.jxl.kiosk.plugins.OverlaySpec;
 import me.jxl.kiosk.plugins.PluginHost;
 
 /**
- * Ziggy, a voice skin. Pick it in Voice Satellite > Appearance > Assistant 1 skin or Assistant 2
- * skin and it draws the turn: a HUD of glowing rings over Ziggy clips that pulses with the voice,
+ * Bladerunner visualiser, a voice skin. Pick it in Voice Satellite > Appearance > Assistant 1 skin or Assistant 2
+ * skin and it draws the turn: a HUD of glowing rings over a Pris clip that pulses with the voice,
  * with what was said and the answer beside it. Full screen it covers the kiosk. Docked it is a
  * small bar at the bottom that leaves the dashboard in view.
  */
@@ -43,7 +43,7 @@ public final class ZiggyPlugin implements KioskPlugin {
             host.status("This Kiosk Satellite version has no voice skins", true);
             return;
         }
-        host.status("Pick Ziggy in Voice Satellite > Appearance", false);
+        host.status("Pick Bladerunner visualiser in Voice Satellite > Appearance", false);
         read(current);
     }
 

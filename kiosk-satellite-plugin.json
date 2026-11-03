@@ -7,7 +7,7 @@
   "minAndroidSdk": 24,
   "minAppVersion": "2026.10.45",
   "entryClass": "kiosk.ziggy.ZiggyPlugin",
-  "description": "A voice skin with a glowing green HUD over animated Ziggy Stardust artwork. The rings pulse with the voice, race while the assistant thinks, and what you said and the answer appear beside it in terminal type. Pick Ziggy in Voice Satellite > Appearance > Assistant 1 skin or Assistant 2 skin.",
+  "description": "A voice skin with a glowing green HUD over animated black and white artwork of Pris from Blade Runner. The clip plays while the assistant speaks, breaking up with static like a failing signal, and what you said and the answer appear beside it in terminal type. Pick Bladerunner visualiser in Voice Satellite > Appearance > Assistant 1 skin or Assistant 2 skin.",
   "author": "MozKaboom",
   "license": "Apache-2.0",
   "capabilities": [
