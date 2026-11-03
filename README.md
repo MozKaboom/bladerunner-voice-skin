@@ -31,7 +31,7 @@ Ziggy has two looks, one for each **Overlay mode**:
 - **Full screen:** the HUD beside the conversation in landscape, above it in portrait, over a dark backdrop.
 - **Docked:** a bar at the bottom of the screen with a small HUD and the latest words. The dashboard stays in view and usable.
 
-While you speak and while the assistant thinks, the HUD holds a dimmed still of the artwork. When the assistant starts speaking its answer, the artwork brightens and comes to life, alternating between two animated clips with a glitch between them. Once the answer has been spoken it holds still again while the words stay on screen. Its panels show the voice level and whether Ziggy is listening, thinking or responding. While the answer is still arriving, a cursor blinks after it. If the assistant took actions and **Show tool use** is on, the last three appear under the answer.
+While you speak and while the assistant thinks, the HUD holds a dimmed still of the artwork. When the assistant starts speaking its answer, the artwork brightens and the Ziggy clip plays from the start, looping if the answer runs longer. Once the answer has been spoken it goes back to the dimmed still while the words stay on screen. Its panels show the voice level and whether Ziggy is listening, thinking or responding. While the answer is still arriving, a cursor blinks after it. If the assistant took actions and **Show tool use** is on, the last three appear under the answer.
 
 Ziggy follows these **Voice Satellite > Appearance** settings:
 
@@ -58,7 +58,7 @@ To try the page on a computer, serve `assets/hud` with any web server and open `
 
 ## Credits
 
-- The Ziggy Stardust clips are original AI-generated artwork by MozKaboom.
+- The Ziggy Stardust clip is original AI-generated artwork by MozKaboom.
 - The [Orbitron](https://github.com/theleagueof/orbitron) and [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) fonts are included under the SIL Open Font License. The licence texts are in `assets/hud/fonts`.
 
 Ziggy is not affiliated with or endorsed by the estate of David Bowie.

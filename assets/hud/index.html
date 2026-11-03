@@ -173,8 +173,8 @@
   layout.className = mode === 'docked' ? 'dock' : 'stage full';
   if (mode === 'docked') document.getElementById('backdrop').hidden = true;
 
-  // Clips: the Ziggy loops, changed with a glitch every few seconds while the HUD shows.
-  var CLIPS = ['Bow5a', 'Bow6a'];
+  // Clips: the Ziggy loops. With more than one, they change with a glitch every few seconds.
+  var CLIPS = ['ziggy'];
   var INTERVAL = 3000;
   var canvas = document.getElementById('video'), ctx = canvas.getContext('2d');
   var glitch = document.getElementById('glitch'), gctx = glitch.getContext('2d');
@@ -190,17 +190,19 @@
   // Some WebViews only decode a frame once a clip plays, so start it and stop at once.
   videos[0].play().then(function () { if (!running) videos[0].pause(); }).catch(function () {});
 
-  // The clips play, and change, only while the assistant answers. Otherwise the frame holds.
+  // The clip plays from the start while the assistant answers. Otherwise its first frame holds.
   function run(on) {
     if (on === running) return;
     running = on;
     layout.classList.toggle('still', !on);
     clearTimeout(timer);
     if (on) {
+      if (CLIPS.length === 1) videos[current].currentTime = 0;
       videos[current].play().catch(function () {});
-      if (!glitching) timer = setTimeout(nextClip, INTERVAL);
+      if (CLIPS.length > 1 && !glitching) timer = setTimeout(nextClip, INTERVAL);
     } else if (!glitching) {
       videos.forEach(function (v) { v.pause(); });
+      if (CLIPS.length === 1) videos[current].currentTime = 0;
     }
   }
 
