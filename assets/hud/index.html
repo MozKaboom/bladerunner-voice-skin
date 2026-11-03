@@ -46,9 +46,9 @@
   canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
   #glitch { display: none; pointer-events: none; z-index: 5; }
   #video { z-index: 2; }
-  /* Until the answer plays, the clip holds still and dim. It dims gently, and brightens at once
-     behind the flash of static that starts the answer. */
-  .still #video { filter: brightness(0.55) saturate(0.7); transition: filter 0.6s ease; }
+  /* Until the answer plays, the clip holds still and dim. It changes at once, behind the flashes
+     of static that start and end the answer. */
+  .still #video, .still #glitch { filter: brightness(0.55) saturate(0.7); }
   .hudl { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
   .rings { position: absolute; top: 50%; left: 50%; width: 84%; aspect-ratio: 1; transform: translate(-50%, -50%) scale(calc(1.1 + var(--lv) * 0.08)); }
   .ring { position: absolute; top: 50%; left: 50%; border-radius: 50%; transform: translate(-50%, -50%); }
@@ -195,20 +195,28 @@
   function run(on) {
     if (on === running) return;
     running = on;
-    layout.classList.toggle('still', !on);
     clearTimeout(timer);
+    clearTimeout(lossTimer);
     if (on) {
+      layout.classList.remove('still');
       if (CLIPS.length === 1) videos[current].currentTime = 0;
       videos[current].play().catch(function () {});
       if (CLIPS.length > 1 && !glitching) timer = setTimeout(nextClip, INTERVAL);
       // The answer starts with a flash of static, as the picture comes to life.
-      clearTimeout(lossTimer);
-      if (!glitching) signalLoss(220);
+      if (!glitching) staticFlash(220, null, function () { scheduleLoss(false); });
       else scheduleLoss(true);
     } else if (!glitching) {
-      videos.forEach(function (v) { v.pause(); });
-      if (CLIPS.length === 1) videos[current].currentTime = 0;
+      // And ends with one: the dimmed still comes back behind the static.
+      staticFlash(260, hold, null);
+    } else {
+      hold();
     }
+  }
+  function hold() {
+    layout.classList.add('still');
+    if (glitching) return;
+    videos.forEach(function (v) { v.pause(); });
+    if (CLIPS.length === 1) videos[current].currentTime = 0;
   }
 
   function sizeCanvases() {
@@ -333,30 +341,31 @@
     if (!running) return;
     lossTimer = setTimeout(signalLoss, first ? 800 + Math.random() * 1200 : 2000 + Math.random() * 3500);
   }
-  function signalLoss(fixed) {
+  function signalLoss() {
     if (!running) return;
-    if (glitching) { scheduleLoss(false); return; }
+    if (glitching || flashing) { scheduleLoss(false); return; }
+    staticFlash(90 + Math.random() * 130, null, function () { scheduleLoss(false); });
+  }
+  // Full static, then the picture shows back through it. Midway, while the static hides the
+  // picture, mid() can change it. A new flash takes over from one still running.
+  var flashing = false, flashId = 0;
+  function staticFlash(length, mid, done) {
     sizeCanvases();
-    glitching = true;
-    var W = glitch.width, H = glitch.height, vid = videos[current];
-    var length = fixed || 90 + Math.random() * 130;
-    var start = performance.now();
+    var id = ++flashId, W = glitch.width, H = glitch.height, start = performance.now();
+    flashing = true;
     glitch.style.display = 'block'; glitch.style.opacity = '1';
     function frame(now) {
+      if (id !== flashId) return;
       var t = now - start, p = Math.min(1, t / length);
+      if (mid && p >= 0.5) { mid(); mid = null; }
       try {
-        // Full static, then the picture shows back through it.
-        paint(gctx, vid, W, H);
+        paint(gctx, videos[current], W, H);
         snowFill(gctx, W, H, p < 0.6 ? 0.92 : 0.92 * (1 - (p - 0.6) / 0.4));
       } catch (e) { /* A frame that fails only skips its effect. */ }
-      if (t < length && running) { requestAnimationFrame(frame); return; }
+      if (t < length) { requestAnimationFrame(frame); return; }
       glitch.style.display = 'none';
-      glitching = false;
-      if (!running) {
-        videos.forEach(function (v) { v.pause(); });
-        if (CLIPS.length === 1) videos[current].currentTime = 0;
-      }
-      scheduleLoss(false);
+      flashing = false;
+      if (done) done();
     }
     requestAnimationFrame(frame);
   }
