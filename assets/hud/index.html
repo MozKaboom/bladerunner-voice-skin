@@ -298,8 +298,7 @@
     requestAnimationFrame(frame);
   }
 
-  // Signal loss: while the clip plays, now and then the picture breaks up like a TV losing its
-  // signal. Each burst mixes torn lines, colour fringes, a rolling picture and bursts of static.
+  // Signal loss: while the clip plays, now and then a brief flash of static covers it.
   var lossTimer = null;
   // TV snow: a few tiles of random grey pixels, drawn at random offsets so it never repeats.
   var SNOW = 160;
@@ -330,42 +329,21 @@
     if (!running) return;
     lossTimer = setTimeout(signalLoss, first ? 1200 + Math.random() * 1800 : 3500 + Math.random() * 5500);
   }
-  function roll(c, vid, W, H, y) {
-    paint(octx, vid, W, H);
-    c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
-    c.drawImage(off, 0, y); c.drawImage(off, 0, y - H);
-    // The black bar between frames as the picture slips.
-    c.fillStyle = 'rgba(0,0,0,0.85)'; c.fillRect(0, y - 4, W, 8);
-  }
   function signalLoss() {
     if (!running) return;
     if (glitching) { scheduleLoss(false); return; }
     sizeCanvases();
     glitching = true;
     var W = glitch.width, H = glitch.height, vid = videos[current];
-    var length = 220 + Math.random() * 480;
-    var rolling = Math.random() < 0.45, rollSpeed = (Math.random() < 0.5 ? -1 : 1) * H * (1.5 + Math.random() * 2.5);
-    // Sometimes the picture drops out to static for a moment in the middle.
-    var dropStart = Math.random() < 0.55 ? length * (0.3 + Math.random() * 0.3) : -1, dropLength = 60 + Math.random() * 140;
+    var length = 90 + Math.random() * 130;
     var start = performance.now();
     glitch.style.display = 'block'; glitch.style.opacity = '1';
     function frame(now) {
       var t = now - start, p = Math.min(1, t / length);
-      var strength = Math.sin(p * Math.PI);
       try {
-        if (dropStart >= 0 && t > dropStart && t < dropStart + dropLength) {
-          gctx.fillStyle = '#000'; gctx.fillRect(0, 0, W, H);
-          snowFill(gctx, W, H, 1);
-          burst(gctx, W, H);
-        } else {
-          if (rolling) roll(gctx, vid, W, H, ((t / 1000) * rollSpeed % H + H) % H);
-          else paint(gctx, vid, W, H);
-          tears(gctx, W, H, Math.floor(3 + strength * 12), 0.4 + strength);
-          chroma(gctx, W, H, strength * (4 + Math.random() * 8));
-          snowFill(gctx, W, H, 0.06 + strength * 0.4);
-          if (Math.random() < 0.6) burst(gctx, W, H);
-          if (Math.random() < 0.4) blocks(gctx, W, H);
-        }
+        // Full static, then the picture shows back through it.
+        paint(gctx, vid, W, H);
+        snowFill(gctx, W, H, p < 0.6 ? 0.92 : 0.92 * (1 - (p - 0.6) / 0.4));
       } catch (e) { /* A frame that fails only skips its effect. */ }
       if (t < length && running) { requestAnimationFrame(frame); return; }
       glitch.style.display = 'none';
