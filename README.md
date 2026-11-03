@@ -28,7 +28,7 @@ Or search for `Bladerunner visualiser` in **Settings > Plugin Manager > Browse p
 
 It has two looks, one for each **Overlay mode**:
 
-- **Full screen:** the HUD beside the conversation in landscape, above it in portrait, over a dark backdrop.
+- **Full screen:** the conversation on the left and the HUD on the right in landscape, above it in portrait, over a dark backdrop.
 - **Docked:** a bar at the bottom of the screen with a small HUD and the latest words. The dashboard stays in view and usable.
 
 While you speak and while the assistant thinks, the HUD holds a dimmed still of the artwork. When the assistant starts speaking its answer, a flash of static breaks the still, and the artwork comes back bright with the Pris clip playing from the start, looping if the answer runs longer. A faint grain of static hangs over it, and every one to three seconds a brief flash of static crosses it, sometimes twice in quick succession, like a TV struggling to hold its signal. As soon as the voice falls silent, one more flash of static cuts back to the dimmed still, and the words stay on screen. If the voice comes back, so does the clip. With **Reactive activity bar** off there is no voice level to follow, so the still comes back when Kiosk Satellite says the answer has finished. Its panels show the voice level and whether Pris is listening, thinking or responding. While the answer is still arriving, a cursor blinks after it. If the assistant took actions and **Show tool use** is on, the last three appear under the answer.

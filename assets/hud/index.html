@@ -19,9 +19,9 @@
   body { font-family: "Share Tech Mono", monospace; -webkit-font-smoothing: antialiased; }
   .backdrop { position: fixed; inset: 0; background: rgba(0, 4, 2, var(--backdrop)); }
 
-  /* Full screen: the HUD beside the words in landscape, above them in portrait. */
+  /* Full screen: the HUD to the right of the words in landscape, above them in portrait. */
   .stage {
-    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    position: fixed; inset: 0; display: flex; flex-direction: row-reverse; align-items: center; justify-content: center;
     gap: 5vmin; padding: 6vmin;
   }
   .full .hud-wrap { flex: none; width: min(46vw, 82vh); aspect-ratio: 1; }
