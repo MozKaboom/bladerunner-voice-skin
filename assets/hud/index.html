@@ -188,8 +188,24 @@
   var current = 0, clip = 0, running = false, timer = null, glitching = false;
   videos[0].src = 'clips/' + CLIPS[0] + '.mp4';
   layout.classList.add('still');
-  // Some WebViews only decode a frame once a clip plays, so start it and stop at once.
-  videos[0].play().then(function () { if (!running) videos[0].pause(); }).catch(function () {});
+  // A paused clip can take a moment to start again, so the clip runs unseen for the whole turn
+  // and the still is a copy of its first frame. The answer never waits for the clip.
+  var shot = document.createElement('canvas'), shotTaken = false;
+  function takeShot(v) {
+    if (shotTaken || v.readyState < 2 || !v.videoWidth) return;
+    shot.width = v.videoWidth; shot.height = v.videoHeight;
+    shot.getContext('2d').drawImage(v, 0, 0);
+    shotTaken = true;
+  }
+  videos[0].addEventListener('loadeddata', function () { takeShot(videos[0]); });
+  videos[0].play().catch(function () {});
+  // What to show: the running clip while answering, otherwise the still. While the clip jumps
+  // back to its start, the still stands in, as it's the same frame.
+  function source(vid) {
+    takeShot(vid);
+    if (running && vid.readyState >= 2 && !vid.seeking) return vid;
+    return shotTaken ? shot : vid;
+  }
 
   // The clip plays from the start while the assistant answers. Otherwise its first frame holds.
   function run(on) {
@@ -200,7 +216,7 @@
     if (on) {
       layout.classList.remove('still');
       if (CLIPS.length === 1) videos[current].currentTime = 0;
-      videos[current].play().catch(function () {});
+      if (videos[current].paused) videos[current].play().catch(function () {});
       if (CLIPS.length > 1 && !glitching) timer = setTimeout(nextClip, INTERVAL);
       // The answer starts with a flash of static, as the picture comes to life.
       if (!glitching) staticFlash(220, null, function () { scheduleLoss(false); });
@@ -214,9 +230,6 @@
   }
   function hold() {
     layout.classList.add('still');
-    if (glitching) return;
-    videos.forEach(function (v) { v.pause(); });
-    if (CLIPS.length === 1) videos[current].currentTime = 0;
   }
 
   function sizeCanvases() {
@@ -230,16 +243,16 @@
   function paint(c, vid, W, H) {
     c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.filter = 'none';
     c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
-    if (!vid || vid.readyState < 2) return;
+    if (!vid || (vid.tagName === 'VIDEO' && vid.readyState < 2)) return;
     // Cover the circle with the clip.
-    var vr = vid.videoWidth / vid.videoHeight || 1, cr = W / H, sw, sh;
+    var vr = (vid.videoWidth || vid.width) / (vid.videoHeight || vid.height) || 1, cr = W / H, sw, sh;
     if (vr > cr) { sh = H; sw = H * vr; } else { sw = W; sh = W / vr; }
     c.drawImage(vid, (W - sw) / 2, (H - sh) / 2, sw, sh);
   }
   (function loop() {
     requestAnimationFrame(loop);
     if (glitch.style.display === 'block') return;
-    paint(ctx, videos[current], canvas.width, canvas.height);
+    paint(ctx, source(videos[current]), canvas.width, canvas.height);
   })();
 
   // The glitch only copies pixels with drawImage, never reads them, so it works however the
@@ -305,7 +318,6 @@
       glitching = false;
       cur.pause();
       if (running) timer = setTimeout(nextClip, INTERVAL);
-      else nxt.pause();
     }
     requestAnimationFrame(frame);
   }
@@ -359,7 +371,7 @@
       var t = now - start, p = Math.min(1, t / length);
       if (mid && p >= 0.5) { mid(); mid = null; }
       try {
-        paint(gctx, videos[current], W, H);
+        paint(gctx, source(videos[current]), W, H);
         snowFill(gctx, W, H, p < 0.6 ? 0.92 : 0.92 * (1 - (p - 0.6) / 0.4));
       } catch (e) { /* A frame that fails only skips its effect. */ }
       if (t < length) { requestAnimationFrame(frame); return; }
