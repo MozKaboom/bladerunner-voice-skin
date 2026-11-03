@@ -171,8 +171,8 @@
   layout.className = mode === 'docked' ? 'dock' : 'stage full';
   if (mode === 'docked') document.getElementById('backdrop').hidden = true;
 
-  // Clips: the six Ziggy loops, changed with a glitch every few seconds while the HUD shows.
-  var CLIPS = ['Bow1a', 'Bow2a', 'Bow3a', 'Bow4a', 'Bow5a', 'Bow6a'];
+  // Clips: the Ziggy loops, changed with a glitch every few seconds while the HUD shows.
+  var CLIPS = ['Bow5a', 'Bow6a'];
   var INTERVAL = 3000;
   var canvas = document.getElementById('video'), ctx = canvas.getContext('2d');
   var glitch = document.getElementById('glitch'), gctx = glitch.getContext('2d');
