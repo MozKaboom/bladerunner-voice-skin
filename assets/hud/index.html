@@ -327,7 +327,7 @@
   function scheduleLoss(first) {
     clearTimeout(lossTimer);
     if (!running) return;
-    lossTimer = setTimeout(signalLoss, first ? 1200 + Math.random() * 1800 : 3500 + Math.random() * 5500);
+    lossTimer = setTimeout(signalLoss, first ? 800 + Math.random() * 1200 : 2000 + Math.random() * 3500);
   }
   function signalLoss() {
     if (!running) return;
