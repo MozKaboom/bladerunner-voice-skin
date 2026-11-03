@@ -45,7 +45,9 @@
   .root { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: #000; border: 0.6vmin solid #0a0a0a; font-family: Orbitron, monospace; container-type: size; }
   canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
   #glitch { display: none; pointer-events: none; z-index: 5; }
-  #video { z-index: 2; }
+  #video { z-index: 2; transition: filter 0.6s ease; }
+  /* Until the answer plays, the clip holds still and dim. */
+  .still #video { filter: brightness(0.55) saturate(0.7); }
   .hudl { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
   .rings { position: absolute; top: 50%; left: 50%; width: 84%; aspect-ratio: 1; transform: translate(-50%, -50%) scale(calc(1.1 + var(--lv) * 0.08)); }
   .ring { position: absolute; top: 50%; left: 50%; border-radius: 50%; transform: translate(-50%, -50%); }
@@ -182,9 +184,25 @@
     v.muted = true; v.loop = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
     return v;
   });
-  var current = 0, clip = 0;
+  var current = 0, clip = 0, running = false, timer = null, glitching = false;
   videos[0].src = 'clips/' + CLIPS[0] + '.mp4';
-  videos[0].play().catch(function () {});
+  layout.classList.add('still');
+  // Some WebViews only decode a frame once a clip plays, so start it and stop at once.
+  videos[0].play().then(function () { if (!running) videos[0].pause(); }).catch(function () {});
+
+  // The clips play, and change, only while the assistant answers. Otherwise the frame holds.
+  function run(on) {
+    if (on === running) return;
+    running = on;
+    layout.classList.toggle('still', !on);
+    clearTimeout(timer);
+    if (on) {
+      videos[current].play().catch(function () {});
+      if (!glitching) timer = setTimeout(nextClip, INTERVAL);
+    } else if (!glitching) {
+      videos.forEach(function (v) { v.pause(); });
+    }
+  }
 
   function sizeCanvases() {
     var r = canvas.getBoundingClientRect();
@@ -255,6 +273,7 @@
     var W = glitch.width, H = glitch.height, next = (clip + 1) % CLIPS.length, nv = 1 - current, cur = videos[current], nxt = videos[nv];
     nxt.src = 'clips/' + CLIPS[next] + '.mp4';
     nxt.play().catch(function () {});
+    glitching = true;
     var start = performance.now(), switched = false;
     glitch.style.display = 'block'; glitch.style.opacity = '1';
     function frame(now) {
@@ -268,12 +287,13 @@
       if (t < 560) { requestAnimationFrame(frame); return; }
       if (!switched) { current = nv; clip = next; }
       glitch.style.display = 'none';
+      glitching = false;
       cur.pause();
-      setTimeout(nextClip, INTERVAL);
+      if (running) timer = setTimeout(nextClip, INTERVAL);
+      else nxt.pause();
     }
     requestAnimationFrame(frame);
   }
-  setTimeout(nextClip, INTERVAL);
 
   // Rings, ticks and the clock.
   var ticks = document.getElementById('ticks');
@@ -305,7 +325,7 @@
   // The words: what was said, the answer as it arrives and the actions taken.
   var said = document.getElementById('said'), answer = document.getElementById('answer'), tools = document.getElementById('tools');
   var words = document.getElementById('words');
-  var MODES = { listening: ['LISTEN', 'ZIGGY ONLINE · LISTENING'], thinking: ['PROCESS', 'ZIGGY ONLINE · PROCESSING'], answering: ['RESPOND', 'ZIGGY ONLINE · RESPONDING'] };
+  var MODES = { listening: ['LISTEN', 'ZIGGY ONLINE · LISTENING'], thinking: ['PROCESS', 'ZIGGY ONLINE · PROCESSING'], answering: ['RESPOND', 'ZIGGY ONLINE · RESPONDING'], done: ['STANDBY', 'ZIGGY ONLINE · STANDBY'] };
 
   // Shrinks the words until the latest of them fit beside the HUD.
   function fit() {
@@ -328,6 +348,7 @@
       document.getElementById('mode').textContent = MODES[phase][0];
       document.getElementById('status').textContent = MODES[phase][1];
       layout.classList.toggle('thinking', phase === 'thinking');
+      run(phase === 'answering');
       said.textContent = s.command || '';
       said.hidden = !s.command;
       answer.textContent = s.answer || '';
@@ -353,7 +374,8 @@
       [0, { phase: 'listening' }],
       [2500, { phase: 'thinking', command: 'What is the weather like today?' }],
       [4500, { phase: 'answering', command: 'What is the weather like today?', answer: 'It is 14 degrees and partly cloudy, ', streaming: true }],
-      [5500, { phase: 'answering', command: 'What is the weather like today?', answer: 'It is 14 degrees and partly cloudy, with light rain expected this evening. Take a coat if you are heading out.', tools: ['Got the forecast for Home'] }]
+      [5500, { phase: 'answering', command: 'What is the weather like today?', answer: 'It is 14 degrees and partly cloudy, with light rain expected this evening. Take a coat if you are heading out.', tools: ['Got the forecast for Home'] }],
+      [12000, { phase: 'done', command: 'What is the weather like today?', answer: 'It is 14 degrees and partly cloudy, with light rain expected this evening. Take a coat if you are heading out.', tools: ['Got the forecast for Home'] }]
     ];
     steps.forEach(function (step) { setTimeout(function () { window.ziggy.update(step[1]); }, step[0]); });
     setInterval(function () {

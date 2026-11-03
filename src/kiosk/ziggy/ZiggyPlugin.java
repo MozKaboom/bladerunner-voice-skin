@@ -20,7 +20,7 @@ import me.jxl.kiosk.plugins.PluginHost;
 public final class ZiggyPlugin implements KioskPlugin {
     static final String KEY = "ziggy";
     static final String PAGE = "hud/index.html";
-    static final String[] EVENTS = {"voice.skin", "voice.overlay", "voice.level", "voice.text", "voice.appearance"};
+    static final String[] EVENTS = {"voice.skin", "voice.overlay", "voice.state", "voice.level", "voice.text", "voice.appearance"};
     /** The docked bar: its widest, its height at Text size 1 and its gap from the bottom edge, in dp. */
     static final int DOCK_WIDTH = 640, DOCK_HEIGHT = 128, DOCK_INSET = 24;
 

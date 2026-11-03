@@ -17,6 +17,9 @@ final class SkinState {
     private boolean selected;
     private boolean skinHeard;
     private String overlay = "hidden";
+    /** idle, listening, processing or responding. Null until KS says, or on versions without it. */
+    private String voice;
+    private boolean voiceHeard;
     private float level;
     private String command = "";
     private String answer = "";
@@ -41,6 +44,10 @@ final class SkinState {
             case "ks.voice.overlay":
                 overlay = text(payload.get("overlay"), "hidden");
                 return Change.MODE;
+            case "ks.voice.state":
+                voiceHeard = true;
+                voice = text(payload.get("state"), null);
+                return Change.WORDS;
             case "ks.voice.level":
                 Object value = payload.get("level");
                 level = value instanceof Number ? clamp(((Number) value).floatValue(), 0, 1) : 0;
@@ -62,6 +69,7 @@ final class SkinState {
     synchronized void readState(Map<?, ?> state) {
         if (!skinHeard) selected = Boolean.TRUE.equals(state.get("skinSelected"));
         if ("hidden".equals(overlay) && state.get("overlay") instanceof String) overlay = (String) state.get("overlay");
+        if (!voiceHeard && state.get("state") instanceof String) voice = (String) state.get("state");
     }
 
     synchronized void readAppearance(Map<?, ?> settings) {
@@ -84,10 +92,21 @@ final class SkinState {
     }
 
     /**
-     * Where the turn is, from the words alone: the assistant is listening until something was
-     * said, thinking until an answer arrives, then answering. An announcement only answers.
+     * Where the turn is: listening, thinking, answering while the answer plays, or done once it
+     * has played and stays on screen. The clips only run while answering. KS reports the voice
+     * state; without it, the words tell. Preview shows with no turn at all, and it answers so
+     * the whole look can be seen.
      */
     synchronized String phase() {
+        if (voice != null) {
+            switch (voice) {
+                case "responding": return "answering";
+                case "processing": return "thinking";
+                case "listening": return "listening";
+                default:
+                    return command.isEmpty() && answer.isEmpty() && !announcement ? "answering" : "done";
+            }
+        }
         if (announcement || !answer.isEmpty()) return "answering";
         if (!command.isEmpty()) return "thinking";
         return "listening";
@@ -114,7 +133,8 @@ final class SkinState {
     }
 
     synchronized void reset() {
-        selected = skinHeard = streaming = announcement = wordsHeard = appearanceHeard = false;
+        selected = skinHeard = streaming = announcement = wordsHeard = appearanceHeard = voiceHeard = false;
+        voice = null;
         overlay = "hidden";
         level = 0;
         command = answer = "";

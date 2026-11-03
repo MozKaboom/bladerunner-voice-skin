@@ -75,6 +75,18 @@ public final class ZiggyTest {
         assert ((Map<?, ?>) Json.parse(state.json())).get("background").equals(0.5);
         state.onEvent("ks.voice.text", map("announcement", true));
         assert "answering".equals(state.phase());
+        // With the voice state, the clips wait for the answer to play.
+        state.onEvent("ks.voice.text", map("command", "Play some Bowie", "answer", "Playing Starman", "streaming", false));
+        state.onEvent("ks.voice.state", map("state", "processing"));
+        assert "thinking".equals(state.phase()) : "Answer text alone doesn't start the clips";
+        state.onEvent("ks.voice.state", map("state", "responding"));
+        assert "answering".equals(state.phase());
+        state.onEvent("ks.voice.state", map("state", "idle"));
+        assert "done".equals(state.phase()) : "The answer stays on screen, still";
+        state.onEvent("ks.voice.text", map());
+        assert "answering".equals(state.phase()) : "Preview: no turn, the whole look shows";
+        state.readState(map("state", "listening"));
+        assert "answering".equals(state.phase()) : "An event beats the read";
         state.reset();
         assert state.drawn() == null && "listening".equals(state.phase()) && state.level() == 0f;
 
@@ -83,6 +95,7 @@ public final class ZiggyTest {
         ZiggyPlugin plugin = new ZiggyPlugin();
         plugin.start(host, Collections.<String, Object>emptyMap());
         for (String event : ZiggyPlugin.EVENTS) assert host.calls.contains("subscribe " + event) : host.calls;
+        assert host.calls.contains("subscribe voice.state");
         assert host.calls.contains("read getVoiceState") && host.calls.contains("read getVoiceText");
         assert !host.calls.toString().contains("show") : "Picked, but no overlay yet";
         plugin.onEvent("ks.voice.overlay", map("overlay", "full"));
