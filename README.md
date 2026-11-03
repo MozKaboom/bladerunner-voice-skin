@@ -2,7 +2,7 @@
 
 A [Kiosk Satellite](https://kiosksatellite.com) voice skin. When you talk to the assistant, a glowing green HUD appears over animated Ziggy Stardust artwork. Its rings pulse with your voice and the answer, race while the assistant thinks, and what you said and the answer appear beside it in terminal type as they arrive.
 
-![Ziggy answering a question: a round HUD of green rings over Ziggy Stardust artwork, with the question and answer beside it](https://raw.githubusercontent.com/MozKaboom/ziggy-voice-skin/main/assets/voice-skin.webp)
+![Ziggy answering a question: a round HUD of green rings over Ziggy Stardust artwork, with the question and answer beside it](https://raw.githubusercontent.com/MozKaboom/bladerunner-voice-skin/main/assets/voice-skin.webp)
 
 ## Installation
 
@@ -10,14 +10,14 @@ A [Kiosk Satellite](https://kiosksatellite.com) voice skin. When you talk to the
 
 Ziggy is listed in [Community Plugins](https://kiosksatellite.com/plugins/). Use the button below to open it in your Kiosk Satellite and install it.
 
-[![Install in Kiosk Satellite](https://kiosksatellite.com/img/badges/plugin-add.svg)](https://kiosksatellite.com/redirect/plugin/?repository=MozKaboom/ziggy-voice-skin)
+[![Install in Kiosk Satellite](https://kiosksatellite.com/img/badges/plugin-add.svg)](https://kiosksatellite.com/redirect/plugin/?repository=MozKaboom/bladerunner-voice-skin)
 
 Or search for `Ziggy` in **Settings > Plugin Manager > Browse plugins** in Kiosk Satellite.
 
 ### Manual
 
 1. Open **Settings > Plugin Manager** in Kiosk Satellite and turn on **Enable Plugins**.
-2. Choose **Add plugin**, paste `https://github.com/MozKaboom/ziggy-voice-skin` and choose **Preview**.
+2. Choose **Add plugin**, paste `https://github.com/MozKaboom/bladerunner-voice-skin` and choose **Preview**.
 3. Review the plugin and choose **Trust and install**.
 
 ## Use it
@@ -72,7 +72,7 @@ python3 tools/test.py
 python3 tools/build.py
 ```
 
-The build creates `dist/ziggy-voice-skin-<version>.zip`. To try it, open **Plugin Manager > Developer Tools > Install from ZIP** in Kiosk Satellite.
+The build creates `dist/bladerunner-voice-skin-<version>.zip`. To try it, open **Plugin Manager > Developer Tools > Install from ZIP** in Kiosk Satellite.
 
 Releases are built by the GitHub Actions workflow in `.github/workflows/build.yml` when a release is published.
 
