@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "ziggy-voice-skin",
+  "name": "Ziggy",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "minAndroidSdk": 24,
+  "minAppVersion": "2026.10.45",
+  "entryClass": "kiosk.ziggy.ZiggyPlugin",
+  "description": "A voice skin with a glowing green HUD over animated Ziggy Stardust artwork. The rings pulse with the voice, race while the assistant thinks, and what you said and the answer appear beside it in terminal type. Pick Ziggy in Voice Satellite > Appearance > Assistant 1 skin or Assistant 2 skin.",
+  "author": "MozKaboom",
+  "license": "Apache-2.0",
+  "capabilities": [
+    "overlay",
+    "host.read",
+    "voice.skin",
+    "voice.text"
+  ],
+  "icon": "icon.png",
+  "voiceSkinThumbnail": "voice-skin.webp"
+}

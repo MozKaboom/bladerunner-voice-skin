@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ziggy</title>
+<style>
+  @font-face { font-family: Orbitron; src: url(fonts/orbitron.woff2) format("woff2"); font-weight: 400 900; }
+  @font-face { font-family: "Share Tech Mono"; src: url(fonts/share-tech-mono.woff2) format("woff2"); }
+  :root {
+    --green: 0, 255, 80;
+    --cyan: 0, 200, 255;
+    --lv: 0;
+    --scale: 1;
+    --backdrop: 0.88;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; color: rgb(var(--cyan)); }
+  body { font-family: "Share Tech Mono", monospace; -webkit-font-smoothing: antialiased; }
+  .backdrop { position: fixed; inset: 0; background: rgba(0, 4, 2, var(--backdrop)); }
+
+  /* Full screen: the HUD beside the words in landscape, above them in portrait. */
+  .stage {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    gap: 5vmin; padding: 6vmin;
+  }
+  .full .hud-wrap { flex: none; width: min(46vw, 82vh); aspect-ratio: 1; }
+  .words { flex: 1; min-width: 0; max-height: 100%; display: flex; flex-direction: column; justify-content: center; gap: calc(2.2vmin * var(--scale)); overflow: hidden; }
+  @media (orientation: portrait) {
+    .stage { flex-direction: column; padding: 8vmin 6vmin; }
+    .full .hud-wrap { width: min(84vw, 52vh); }
+    .full .words { width: 100%; flex: 1; justify-content: flex-start; }
+  }
+
+  /* The HUD, after the ziggy dashboard card. */
+  .hud-wrap { position: relative; border-radius: 50%; transform: scale(calc(1 + var(--lv) * 0.035)); }
+  .hud-wrap::before {
+    content: ""; position: absolute; inset: -1.5%; border-radius: 50%;
+    box-shadow:
+      0 0 calc(1.2vmin + var(--lv) * 3vmin) rgba(var(--green), calc(0.3 + var(--lv) * 0.45)),
+      0 0 calc(3.5vmin + var(--lv) * 6vmin) rgba(var(--green), calc(0.15 + var(--lv) * 0.3));
+    animation: hudPulse 2s ease-in-out infinite;
+  }
+  @keyframes hudPulse { 50% { opacity: 0.7; } }
+  .root { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: #000; border: 0.6vmin solid #0a0a0a; font-family: Orbitron, monospace; container-type: size; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #glitch { display: none; pointer-events: none; z-index: 5; }
+  #video { z-index: 2; }
+  .hudl { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+  .rings { position: absolute; top: 50%; left: 50%; width: 84%; aspect-ratio: 1; transform: translate(-50%, -50%) scale(calc(1.1 + var(--lv) * 0.08)); }
+  .ring { position: absolute; top: 50%; left: 50%; border-radius: 50%; transform: translate(-50%, -50%); }
+  .r1 { width: 100%; height: 100%; border: 1.5px dashed rgba(var(--green), 0.2); animation: cw 24s linear infinite; }
+  .r2 {
+    width: 90%; height: 90%; border: 3px solid rgba(var(--green), 0.25); animation: ccw 16s linear infinite;
+    border-top-color: rgba(0, 255, 100, 1); border-right-color: rgba(0, 255, 100, 0.9);
+    box-shadow: 0 0 calc(12px + var(--lv) * 30px) rgba(var(--green), calc(0.4 + var(--lv) * 0.5)), inset 0 0 8px rgba(var(--green), 0.1);
+  }
+  .r3 { width: 78%; height: 78%; border: 1.5px dashed rgba(0, 200, 60, 0.15); border-bottom: 2.5px solid rgba(60, 255, 120, 0.75); animation: cw 9s linear infinite; }
+  .r4 { width: 66%; height: 66%; border: 1px solid rgba(var(--green), 0.1); animation: ccw 30s linear infinite; }
+  .r5 { width: 52%; height: 52%; border: 2px dotted rgba(var(--green), calc(0.22 + var(--lv) * 0.5)); animation: cw 5s linear infinite; }
+  .r6 { width: 38%; height: 38%; border: 1px solid rgba(var(--green), 0.08); animation: ccw 12s linear infinite; }
+  .core {
+    width: calc(14% + var(--lv) * 22%); height: calc(14% + var(--lv) * 22%);
+    background: radial-gradient(circle, rgba(var(--green), calc(0.08 + var(--lv) * 0.35)), transparent 70%);
+  }
+  .glow { width: 90%; height: 90%; box-shadow: 0 0 35px rgba(var(--green), 0.12), inset 0 0 30px rgba(var(--green), 0.07); opacity: calc(0.4 + var(--lv) * 0.6); }
+  .ticks { position: absolute; top: 50%; left: 50%; width: 90%; height: 90%; transform: translate(-50%, -50%); border-radius: 50%; animation: ccw 16s linear infinite; }
+  /* Each tick spans the ring's height and is drawn only at its top, so it turns about the centre. */
+  .ticks i { position: absolute; top: 0; left: 50%; width: 1.5px; height: 100%; background: linear-gradient(rgba(var(--green), 0.35) 0 5px, transparent 5px); }
+  .ticks i.major { width: 3px; background: linear-gradient(rgba(var(--green), 0.8) 0 11px, transparent 11px); }
+  /* Thinking: the rings race. */
+  .thinking .r2 { animation-duration: 2.2s; }
+  .thinking .r3 { animation-duration: 1.6s; }
+  .thinking .r5 { animation-duration: 1s; }
+  .thinking .ticks { animation-duration: 3s; }
+  @keyframes cw { to { transform: translate(-50%, -50%) rotate(360deg); } }
+  @keyframes ccw { to { transform: translate(-50%, -50%) rotate(-360deg); } }
+  .scan { position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, rgba(var(--green), 0.22), rgba(var(--green), 0.55), rgba(var(--green), 0.22), transparent); box-shadow: 0 0 10px rgba(var(--green), 0.35); animation: scan 5s linear infinite; }
+  @keyframes scan { from { top: 0; } to { top: 100%; } }
+  .corner { position: absolute; width: 14%; height: 14%; border: 2px solid rgba(var(--green), 0.9); }
+  .corner.tl { top: 6%; left: 6%; border-right: 0; border-bottom: 0; border-top-left-radius: 100% 100%; }
+  .corner.tr { top: 6%; right: 6%; border-left: 0; border-bottom: 0; border-top-right-radius: 100% 100%; }
+  .corner.bl { bottom: 6%; left: 6%; border-right: 0; border-top: 0; border-bottom-left-radius: 100% 100%; }
+  .corner.br { bottom: 6%; right: 6%; border-left: 0; border-top: 0; border-bottom-right-radius: 100% 100%; }
+  .hl { position: absolute; left: 14%; right: 14%; height: 1px; background: linear-gradient(90deg, transparent, rgba(var(--green), 0.38), transparent); }
+  .hl.top { top: 21%; } .hl.bot { bottom: 21%; }
+  .label { position: absolute; color: rgb(var(--cyan)); text-shadow: 0 0 7px rgba(var(--cyan), 0.65); letter-spacing: 0.04em; font-size: 3.2cqw; line-height: 1.55; }
+  .label .l { display: block; color: rgba(var(--cyan), 0.45); font-size: 0.72em; letter-spacing: 0.12em; }
+  .label .v { display: block; font-weight: 700; color: #00e5ff; text-shadow: 0 0 9px #00e5ff; }
+  .label .v.ok { color: #00ffcc; text-shadow: 0 0 9px #00ffcc; }
+  .panel.left { left: 12%; top: 36%; }
+  .panel.right { right: 12%; top: 36%; text-align: right; }
+  .clock { top: 11%; left: 50%; transform: translateX(-50%); font-size: 4cqw; letter-spacing: 0.22em; text-shadow: 0 0 14px rgb(var(--cyan)), 0 0 28px rgba(var(--cyan), 0.4); white-space: nowrap; }
+  .micro { top: 17%; font-size: 2cqw; color: rgba(var(--cyan), 0.4); letter-spacing: 0.12em; }
+  .micro.al { left: 24%; } .micro.ar { right: 24%; }
+  .ebar { position: absolute; bottom: 19%; left: 50%; transform: translateX(-50%); width: 38%; height: 3px; background: rgba(var(--green), 0.14); border-radius: 2px; overflow: hidden; }
+  .efill { height: 100%; width: calc(30% + var(--lv) * 70%); background: linear-gradient(90deg, #004400, #00ff50, #00ffaa); box-shadow: 0 0 8px #00ff50; border-radius: 2px; }
+  .status { bottom: 12%; left: 50%; transform: translateX(-50%); font-size: 2.1cqw; letter-spacing: 0.16em; color: rgba(var(--cyan), 0.6); white-space: nowrap; }
+
+  /* The words, in the HUD's type. */
+  .said { font-size: calc(2.6vmin * var(--scale) * var(--fit, 1)); color: rgba(var(--cyan), 0.6); letter-spacing: 0.04em; }
+  .said::before { content: "> "; color: rgba(var(--green), 0.8); }
+  .answer {
+    font-size: calc(4.4vmin * var(--scale) * var(--fit, 1)); line-height: 1.32; color: #c8fbff;
+    text-shadow: 0 0 10px rgba(var(--cyan), 0.7), 0 0 26px rgba(var(--cyan), 0.25); white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .answer.typing::after { content: "\2588"; margin-left: 0.15em; color: rgb(var(--green)); animation: blink 0.9s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .tools { list-style: none; font-size: calc(2.1vmin * var(--scale) * var(--fit, 1)); color: rgba(var(--green), 0.75); letter-spacing: 0.05em; }
+  .tools li::before { content: "\25C6  "; }
+  .heading { font-family: Orbitron, monospace; font-size: calc(1.8vmin * var(--scale)); letter-spacing: 0.3em; color: rgba(var(--green), 0.7); }
+  [hidden] { display: none !important; }
+
+  /* Docked: a bar with a small HUD beside the words. */
+  .dock {
+    position: fixed; inset: 0; display: flex; align-items: center; gap: 14px; padding: 10px 18px 10px 10px;
+    background: rgba(2, 10, 5, 0.94); border: 1px solid rgba(var(--green), 0.55); border-radius: 22px;
+    box-shadow: inset 0 0 calc(10px + var(--lv) * 24px) rgba(var(--green), calc(0.12 + var(--lv) * 0.3));
+  }
+  .dock .hud-wrap { flex: none; height: 100%; aspect-ratio: 1; }
+  .dock .root { border-width: 2px; }
+  .dock .label, .dock .scan, .dock .corner, .dock .hl, .dock .ebar, .dock .ticks, .dock .r1, .dock .r4, .dock .r6 { display: none; }
+  .dock .words { gap: 4px; justify-content: center; height: 100%; }
+  .dock .heading { display: none; }
+  .dock .said { font-size: calc(13px * var(--scale)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dock .answer { font-size: calc(17px * var(--scale)); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+  .dock .tools { display: none; }
+</style>
+</head>
+<body>
+<div class="backdrop" id="backdrop"></div>
+<div id="layout">
+  <div class="hud-wrap" id="hud">
+    <div class="root">
+      <canvas id="video"></canvas>
+      <canvas id="glitch"></canvas>
+      <div class="hudl">
+        <div class="rings">
+          <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
+          <div class="ring r4"></div><div class="ring r5"></div><div class="ring r6"></div>
+          <div class="ring core"></div><div class="ring glow"></div>
+          <div class="ticks" id="ticks"></div>
+        </div>
+        <div class="scan"></div>
+        <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+        <div class="hl top"></div><div class="hl bot"></div>
+        <div class="label clock" id="clock">00:00:00</div>
+        <div class="label micro al">ZIGGY&middot;CORE</div>
+        <div class="label micro ar">STARDUST</div>
+        <div class="label panel left"><span class="l">VOICE</span><span class="v" id="lv">0%</span><span class="l">MODE</span><span class="v" id="mode">LISTEN</span></div>
+        <div class="label panel right"><span class="l">DATE</span><span class="v" id="date">----</span><span class="l">STATUS</span><span class="v ok">ONLINE</span></div>
+        <div class="ebar"><div class="efill"></div></div>
+        <div class="label status" id="status">ZIGGY ONLINE</div>
+      </div>
+    </div>
+  </div>
+  <div class="words" id="words">
+    <div class="heading">ZIGGY</div>
+    <div class="said" id="said" hidden></div>
+    <div class="answer" id="answer" hidden></div>
+    <ul class="tools" id="tools" hidden></ul>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var mode = params.get('mode') === 'docked' ? 'docked' : 'full';
+  var root = document.documentElement.style;
+  var layout = document.getElementById('layout');
+  layout.className = mode === 'docked' ? 'dock' : 'stage full';
+  if (mode === 'docked') document.getElementById('backdrop').hidden = true;
+
+  // Clips: the six Ziggy loops, changed with a glitch every few seconds while the HUD shows.
+  var CLIPS = ['Bow1a', 'Bow2a', 'Bow3a', 'Bow4a', 'Bow5a', 'Bow6a'];
+  var INTERVAL = 3000;
+  var canvas = document.getElementById('video'), ctx = canvas.getContext('2d');
+  var glitch = document.getElementById('glitch'), gctx = glitch.getContext('2d');
+  var off = document.createElement('canvas'), octx = off.getContext('2d');
+  var videos = [0, 1].map(function () {
+    var v = document.createElement('video');
+    v.muted = true; v.loop = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
+    return v;
+  });
+  var current = 0, clip = 0;
+  videos[0].src = 'clips/' + CLIPS[0] + '.mp4';
+  videos[0].play().catch(function () {});
+
+  function sizeCanvases() {
+    var r = canvas.getBoundingClientRect();
+    var w = Math.max(10, Math.round(r.width)), h = Math.max(10, Math.round(r.height));
+    [canvas, glitch, off].forEach(function (c) { if (c.width !== w) c.width = w; if (c.height !== h) c.height = h; });
+  }
+  sizeCanvases();
+  window.addEventListener('resize', function () { sizeCanvases(); fit(); });
+
+  function paint(c, vid, W, H) {
+    c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.filter = 'none';
+    c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+    if (!vid || vid.readyState < 2) return;
+    // Cover the circle with the clip.
+    var vr = vid.videoWidth / vid.videoHeight || 1, cr = W / H, sw, sh;
+    if (vr > cr) { sh = H; sw = H * vr; } else { sw = W; sh = W / vr; }
+    c.drawImage(vid, (W - sw) / 2, (H - sh) / 2, sw, sh);
+  }
+  (function loop() {
+    requestAnimationFrame(loop);
+    if (glitch.style.display === 'block') return;
+    paint(ctx, videos[current], canvas.width, canvas.height);
+  })();
+
+  // The glitch only copies pixels with drawImage, never reads them, so it works however the
+  // page loads its clips.
+  function tears(c, W, H, count, intensity) {
+    for (var i = 0; i < count; i++) {
+      var y = Math.floor(Math.random() * (H - 15)), h = 1 + Math.floor(Math.random() * 12), dx = Math.floor((Math.random() - 0.5) * 50 * intensity);
+      if (!dx) continue;
+      octx.clearRect(0, 0, W, h); octx.drawImage(glitch, 0, y, W, h, 0, 0, W, h);
+      c.clearRect(0, y, W, h); c.drawImage(off, 0, 0, W, h, dx, y, W, h);
+    }
+  }
+  function chroma(c, W, H, px) {
+    if (px < 1) return;
+    octx.clearRect(0, 0, W, H); octx.drawImage(glitch, 0, 0);
+    c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.15;
+    c.drawImage(off, -Math.round(px), 0); c.drawImage(off, Math.round(px), 0);
+    c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  }
+  function noise(c, W, H, alpha) {
+    if (alpha <= 0.01) return;
+    var n = Math.floor(W * H * alpha / 40);
+    for (var i = 0; i < n; i++) {
+      var v = Math.random() > 0.65 ? 210 : Math.floor(Math.random() * 130);
+      c.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',0.75)';
+      c.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+    }
+  }
+  function burst(c, W, H) {
+    for (var i = 3 + Math.floor(Math.random() * 4); i > 0; i--) {
+      var v = 140 + Math.floor(Math.random() * 80);
+      c.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',' + (0.2 + Math.random() * 0.38).toFixed(2) + ')';
+      c.fillRect(0, Math.random() * H, W, 1 + Math.random() * 3);
+    }
+  }
+  function blocks(c, W, H) {
+    for (var i = 0; i < 6; i++) {
+      var x = Math.floor(Math.random() * W / 8) * 8, y = Math.floor(Math.random() * H / 8) * 8, w = 8 + Math.floor(Math.random() * 40), h = 4 + Math.floor(Math.random() * 14), r = Math.random();
+      if (r < 0.4) { c.fillStyle = 'rgba(0,0,0,0.92)'; c.fillRect(x, y, w, h); }
+      else if (r < 0.65) { var v = 70 + Math.floor(Math.random() * 130); c.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',0.65)'; c.fillRect(x, y, w, h); }
+      else { c.drawImage(glitch, x, y, w, h, x + (Math.random() > 0.5 ? 8 : -8), y, w, h); }
+    }
+  }
+  function nextClip() {
+    sizeCanvases();
+    var W = glitch.width, H = glitch.height, next = (clip + 1) % CLIPS.length, nv = 1 - current, cur = videos[current], nxt = videos[nv];
+    nxt.src = 'clips/' + CLIPS[next] + '.mp4';
+    nxt.play().catch(function () {});
+    var start = performance.now(), switched = false;
+    glitch.style.display = 'block'; glitch.style.opacity = '1';
+    function frame(now) {
+      var t = now - start;
+      try {
+        if (t < 160) { var a = t / 160; paint(gctx, cur, W, H); tears(gctx, W, H, Math.floor(a * 5), a); chroma(gctx, W, H, a * 3); noise(gctx, W, H, a * 0.12); }
+        else if (t < 360) { paint(gctx, Math.floor((t - 160) / 200 * 18) % 3 === 0 ? nxt : cur, W, H); tears(gctx, W, H, 10, 1); chroma(gctx, W, H, 6 + Math.random() * 8); noise(gctx, W, H, 0.5); burst(gctx, W, H); blocks(gctx, W, H); }
+        else if (t < 420) { if (!switched) { switched = true; current = nv; clip = next; } paint(gctx, nxt, W, H); noise(gctx, W, H, 0.35); tears(gctx, W, H, 4, 0.6); }
+        else { var p = Math.min(1, (t - 420) / 140); paint(gctx, nxt, W, H); noise(gctx, W, H, (1 - p) * 0.25); tears(gctx, W, H, Math.floor((1 - p) * 3), 0.4); glitch.style.opacity = String(1 - p); }
+      } catch (e) { /* A frame that fails only skips its effect. */ }
+      if (t < 560) { requestAnimationFrame(frame); return; }
+      if (!switched) { current = nv; clip = next; }
+      glitch.style.display = 'none';
+      cur.pause();
+      setTimeout(nextClip, INTERVAL);
+    }
+    requestAnimationFrame(frame);
+  }
+  setTimeout(nextClip, INTERVAL);
+
+  // Rings, ticks and the clock.
+  var ticks = document.getElementById('ticks');
+  for (var i = 0; i < 36; i++) {
+    var tick = document.createElement('i');
+    if (i % 9 === 0) tick.className = 'major';
+    tick.style.transform = 'translateX(-50%) rotate(' + i * 10 + 'deg)';
+    ticks.appendChild(tick);
+  }
+  function clock() {
+    var now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString('en-GB', { hour12: false });
+    document.getElementById('date').textContent = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase();
+  }
+  clock();
+  setInterval(clock, 1000);
+
+  // The voice level, eased toward the latest reading on every frame.
+  var target = 0, shown = 0, reactive = true;
+  var lvText = document.getElementById('lv');
+  (function ease() {
+    requestAnimationFrame(ease);
+    shown += ((reactive ? target : 0) - shown) * 0.22;
+    if (shown < 0.001) shown = 0;
+    root.setProperty('--lv', shown.toFixed(3));
+    lvText.textContent = Math.round(shown * 100) + '%';
+  })();
+
+  // The words: what was said, the answer as it arrives and the actions taken.
+  var said = document.getElementById('said'), answer = document.getElementById('answer'), tools = document.getElementById('tools');
+  var words = document.getElementById('words');
+  var MODES = { listening: ['LISTEN', 'ZIGGY ONLINE · LISTENING'], thinking: ['PROCESS', 'ZIGGY ONLINE · PROCESSING'], answering: ['RESPOND', 'ZIGGY ONLINE · RESPONDING'] };
+
+  // Shrinks the words until the latest of them fit beside the HUD.
+  function fit() {
+    if (mode === 'docked') return;
+    var scale = 1;
+    root.setProperty('--fit', scale);
+    while (words.scrollHeight > words.clientHeight + 1 && scale > 0.45) {
+      scale -= 0.05;
+      root.setProperty('--fit', scale.toFixed(2));
+    }
+  }
+
+  window.ziggy = {
+    update: function (s) {
+      s = s || {};
+      reactive = s.reactive !== false;
+      root.setProperty('--scale', Math.max(0.5, Math.min(2, Number(s.textScale) || 1)));
+      root.setProperty('--backdrop', s.background == null ? 0.88 : Math.max(0, Math.min(1, Number(s.background))));
+      var phase = MODES[s.phase] ? s.phase : 'listening';
+      document.getElementById('mode').textContent = MODES[phase][0];
+      document.getElementById('status').textContent = MODES[phase][1];
+      layout.classList.toggle('thinking', phase === 'thinking');
+      said.textContent = s.command || '';
+      said.hidden = !s.command;
+      answer.textContent = s.answer || '';
+      answer.hidden = !s.answer;
+      answer.classList.toggle('typing', !!s.streaming);
+      tools.innerHTML = '';
+      (s.tools || []).slice(-3).forEach(function (line) {
+        var li = document.createElement('li');
+        li.textContent = line;
+        tools.appendChild(li);
+      });
+      tools.hidden = !tools.firstChild;
+      fit();
+    },
+    level: function (value) {
+      target = Math.max(0, Math.min(1, Number(value) || 0));
+    }
+  };
+
+  // Opened in a browser on its own, ?demo plays a made-up turn so the look can be checked.
+  if (params.has('demo')) {
+    var steps = [
+      [0, { phase: 'listening' }],
+      [2500, { phase: 'thinking', command: 'What is the weather like today?' }],
+      [4500, { phase: 'answering', command: 'What is the weather like today?', answer: 'It is 14 degrees and partly cloudy, ', streaming: true }],
+      [5500, { phase: 'answering', command: 'What is the weather like today?', answer: 'It is 14 degrees and partly cloudy, with light rain expected this evening. Take a coat if you are heading out.', tools: ['Got the forecast for Home'] }]
+    ];
+    steps.forEach(function (step) { setTimeout(function () { window.ziggy.update(step[1]); }, step[0]); });
+    setInterval(function () {
+      var t = performance.now() / 1000;
+      window.ziggy.level(t % 9 < 2.5 || (t % 9 > 4.5 && t % 9 < 8.5) ? 0.35 + 0.35 * Math.abs(Math.sin(t * 7)) * Math.random() : 0);
+    }, 33);
+  }
+})();
+</script>
+</body>
+</html>
