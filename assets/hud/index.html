@@ -435,17 +435,35 @@
     }
   }
 
+  // KS can report the answer as playing for a while after the voice has stopped, so the voice
+  // level decides too: once the answer has been heard, QUIET ms of silence end it at once. If
+  // the voice comes back, so does the clip.
+  var QUIET = 450, LOUD = 0.04;
+  var phase = 'listening', heard = false, lastLoud = 0, quiet = false;
+  function showPhase() {
+    var shown = phase === 'answering' && quiet ? 'done' : phase;
+    document.getElementById('mode').textContent = MODES[shown][0];
+    document.getElementById('status').textContent = MODES[shown][1];
+    layout.classList.toggle('thinking', shown === 'thinking');
+    run(shown === 'answering');
+  }
+  setInterval(function () {
+    if (phase === 'answering' && heard && !quiet && performance.now() - lastLoud > QUIET) {
+      quiet = true;
+      showPhase();
+    }
+  }, 50);
+
   window.ziggy = {
     update: function (s) {
       s = s || {};
       reactive = s.reactive !== false;
       root.setProperty('--scale', Math.max(0.5, Math.min(2, Number(s.textScale) || 1)));
       root.setProperty('--backdrop', s.background == null ? 0.88 : Math.max(0, Math.min(1, Number(s.background))));
-      var phase = MODES[s.phase] ? s.phase : 'listening';
-      document.getElementById('mode').textContent = MODES[phase][0];
-      document.getElementById('status').textContent = MODES[phase][1];
-      layout.classList.toggle('thinking', phase === 'thinking');
-      run(phase === 'answering');
+      var next = MODES[s.phase] ? s.phase : 'listening';
+      if (next !== phase) { heard = false; quiet = false; }
+      phase = next;
+      showPhase();
       said.textContent = s.command || '';
       said.hidden = !s.command;
       answer.textContent = s.answer || '';
@@ -462,6 +480,11 @@
     },
     level: function (value) {
       target = Math.max(0, Math.min(1, Number(value) || 0));
+      if (phase === 'answering' && target > LOUD) {
+        heard = true;
+        lastLoud = performance.now();
+        if (quiet) { quiet = false; showPhase(); }
+      }
     },
     // Breaks up the picture now, if the clip is playing. For trying the look.
     glitch: function () {
