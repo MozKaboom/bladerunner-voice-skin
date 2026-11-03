@@ -31,7 +31,7 @@ Ziggy has two looks, one for each **Overlay mode**:
 - **Full screen:** the HUD beside the conversation in landscape, above it in portrait, over a dark backdrop.
 - **Docked:** a bar at the bottom of the screen with a small HUD and the latest words. The dashboard stays in view and usable.
 
-While you speak and while the assistant thinks, the HUD holds a dimmed still of the artwork. When the assistant starts speaking its answer, the artwork brightens and the Ziggy clip plays from the start, looping if the answer runs longer. Once the answer has been spoken it goes back to the dimmed still while the words stay on screen. Its panels show the voice level and whether Ziggy is listening, thinking or responding. While the answer is still arriving, a cursor blinks after it. If the assistant took actions and **Show tool use** is on, the last three appear under the answer.
+While you speak and while the assistant thinks, the HUD holds a dimmed still of the artwork. When the assistant starts speaking its answer, the artwork brightens and the Ziggy clip plays from the start, looping if the answer runs longer. Every few seconds the picture breaks up like a TV losing its signal: it rolls, tears, fringes and drops to static for a moment. Once the answer has been spoken it goes back to the dimmed still while the words stay on screen. Its panels show the voice level and whether Ziggy is listening, thinking or responding. While the answer is still arriving, a cursor blinks after it. If the assistant took actions and **Show tool use** is on, the last three appear under the answer.
 
 Ziggy follows these **Voice Satellite > Appearance** settings:
 
