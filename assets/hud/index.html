@@ -186,10 +186,14 @@
     return v;
   });
   var current = 0, clip = 0, running = false, timer = null, glitching = false;
-  videos[0].src = 'clips/' + CLIPS[0] + '.mp4';
+  // Each turn gets a new page, and the plugin keeps the clip's position between them, so the
+  // clip opens where it got to last turn. Over a few answers the whole of it shows.
+  var resumeAt = Math.max(0, parseFloat(params.get('at')) || 0);
+  videos[0].src = 'clips/' + CLIPS[0] + '.mp4' + (resumeAt > 0 ? '#t=' + resumeAt.toFixed(2) : '');
   layout.classList.add('still');
-  // A paused clip can take a moment to start again, so the clip runs unseen for the whole turn
-  // and the still is a copy of its first frame. The answer never waits for the clip.
+  // A paused clip can take a moment to start again, and a jump within it can take longer still,
+  // so the clip runs unseen for the whole turn and is never moved. The still is a copy of its
+  // first frame, from a second copy of the clip that is let go once it has been taken.
   var shot = document.createElement('canvas'), shotTaken = false;
   function takeShot(v) {
     if (shotTaken || v.readyState < 2 || !v.videoWidth) return;
@@ -197,24 +201,28 @@
     shot.getContext('2d').drawImage(v, 0, 0);
     shotTaken = true;
   }
-  videos[0].addEventListener('loadeddata', function () { takeShot(videos[0]); });
+  var still = document.createElement('video');
+  still.muted = true; still.playsInline = true; still.setAttribute('playsinline', ''); still.preload = 'auto';
+  still.addEventListener('loadeddata', function () {
+    takeShot(still);
+    if (!shotTaken) return;
+    still.pause(); still.removeAttribute('src'); still.load();
+  });
+  still.src = 'clips/' + CLIPS[0] + '.mp4';
+  // Some WebViews only decode a frame once a clip plays.
+  still.play().catch(function () {});
   videos[0].play().catch(function () {});
-  // What to show: the running clip while answering, otherwise the still. While the clip jumps
-  // back to where it was, the still stands in, under the flash of static.
+  // What to show: the running clip while answering, otherwise the still.
   function source(vid) {
-    takeShot(vid);
-    if (running && vid.readyState >= 2 && !vid.seeking) return vid;
+    if (running && vid.readyState >= 2) return vid;
     return shotTaken ? shot : vid;
   }
 
-  // While the assistant answers, the clip plays on from where it last stopped, so over a few
-  // answers the whole of it shows. Otherwise its first frame holds.
-  // Each turn gets a new page, so the plugin keeps the position between them.
-  var resumeAt = Math.max(0, parseFloat(params.get('at')) || 0);
   function report(t) {
     try { if (window.ziggyHost) window.ziggyHost.position(t); } catch (e) { /* No plugin: a browser. */ }
   }
-  setInterval(function () { if (running) report(videos[current].currentTime || 0); }, 500);
+  setInterval(function () { report(videos[current].currentTime || 0); }, 500);
+  // While the assistant answers, the clip shows, wherever it has got to. Otherwise the still.
   function run(on) {
     if (on === running) return;
     running = on;
@@ -222,15 +230,12 @@
     clearTimeout(lossTimer);
     if (on) {
       layout.classList.remove('still');
-      if (CLIPS.length === 1) videos[current].currentTime = resumeAt;
       if (videos[current].paused) videos[current].play().catch(function () {});
       if (CLIPS.length > 1 && !glitching) timer = setTimeout(nextClip, INTERVAL);
       // The answer starts with a flash of static, as the picture comes to life.
       if (!glitching) staticFlash(220, null, function () { scheduleLoss(false); });
       else scheduleLoss(true);
     } else if (!glitching) {
-      resumeAt = videos[current].currentTime || 0;
-      report(resumeAt);
       // And ends with one: the dimmed still comes back behind the static.
       staticFlash(260, hold, null);
     } else {
