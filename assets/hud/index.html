@@ -200,14 +200,21 @@
   videos[0].addEventListener('loadeddata', function () { takeShot(videos[0]); });
   videos[0].play().catch(function () {});
   // What to show: the running clip while answering, otherwise the still. While the clip jumps
-  // back to its start, the still stands in, as it's the same frame.
+  // back to where it was, the still stands in, under the flash of static.
   function source(vid) {
     takeShot(vid);
     if (running && vid.readyState >= 2 && !vid.seeking) return vid;
     return shotTaken ? shot : vid;
   }
 
-  // The clip plays from the start while the assistant answers. Otherwise its first frame holds.
+  // While the assistant answers, the clip plays on from where it last stopped, so over a few
+  // answers the whole of it shows. Otherwise its first frame holds.
+  // Each turn gets a new page, so the plugin keeps the position between them.
+  var resumeAt = Math.max(0, parseFloat(params.get('at')) || 0);
+  function report(t) {
+    try { if (window.ziggyHost) window.ziggyHost.position(t); } catch (e) { /* No plugin: a browser. */ }
+  }
+  setInterval(function () { if (running) report(videos[current].currentTime || 0); }, 500);
   function run(on) {
     if (on === running) return;
     running = on;
@@ -215,13 +222,15 @@
     clearTimeout(lossTimer);
     if (on) {
       layout.classList.remove('still');
-      if (CLIPS.length === 1) videos[current].currentTime = 0;
+      if (CLIPS.length === 1) videos[current].currentTime = resumeAt;
       if (videos[current].paused) videos[current].play().catch(function () {});
       if (CLIPS.length > 1 && !glitching) timer = setTimeout(nextClip, INTERVAL);
       // The answer starts with a flash of static, as the picture comes to life.
       if (!glitching) staticFlash(220, null, function () { scheduleLoss(false); });
       else scheduleLoss(true);
     } else if (!glitching) {
+      resumeAt = videos[current].currentTime || 0;
+      report(resumeAt);
       // And ends with one: the dimmed still comes back behind the static.
       staticFlash(260, hold, null);
     } else {

@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Color;
 import android.net.Uri;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -62,8 +63,25 @@ final class HudView extends FrameLayout {
                 sendLevel();
             }
         });
+        web.addJavascriptInterface(new Clip(), "ziggyHost");
         addView(web, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-        web.loadUrl(Uri.fromFile(new File(page)).buildUpon().appendQueryParameter("mode", mode).build().toString());
+        web.loadUrl(Uri.fromFile(new File(page)).buildUpon()
+            .appendQueryParameter("mode", mode)
+            .appendQueryParameter("at", String.format(Locale.ROOT, "%.2f", resumeAt))
+            .build().toString());
+    }
+
+    /**
+     * Where the clip got to. Each turn builds a new page, so the page reports it here and the
+     * next page plays on from it, and over a few answers the whole clip shows.
+     */
+    private static volatile double resumeAt;
+
+    /** What the page may call: only the clip's position. */
+    static final class Clip {
+        @JavascriptInterface public void position(double seconds) {
+            if (seconds >= 0 && seconds < 3600) resumeAt = seconds;
+        }
     }
 
     /** Gives the view a size of its own, for the docked bar, whose overlay wraps its content. */
