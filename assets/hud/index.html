@@ -186,14 +186,13 @@
     return v;
   });
   var current = 0, clip = 0, running = false, timer = null, glitching = false;
-  // Each turn gets a new page, and the plugin keeps the clip's position between them, so the
-  // clip opens where it got to last turn. Over a few answers the whole of it shows.
-  var resumeAt = Math.max(0, parseFloat(params.get('at')) || 0);
-  videos[0].src = 'clips/' + CLIPS[0] + '.mp4' + (resumeAt > 0 ? '#t=' + resumeAt.toFixed(2) : '');
+  // The clip waits on its first frame and plays from the start each time the answer does.
+  videos[0].src = 'clips/' + CLIPS[0] + '.mp4';
+  videos[0].preload = 'auto';
   layout.classList.add('still');
-  // A paused clip can take a moment to start again, and a jump within it can take longer still,
-  // so the clip runs unseen for the whole turn and is never moved. The still is a copy of its
-  // first frame, from a second copy of the clip that is let go once it has been taken.
+  // The still is a copy of the first frame, from a second copy of the clip that is let go once
+  // it has been taken. While the clip gets going, the still is what shows, so it starts on the
+  // same picture.
   var shot = document.createElement('canvas'), shotTaken = false;
   function takeShot(v) {
     if (shotTaken || v.readyState < 2 || !v.videoWidth) return;
@@ -211,18 +210,13 @@
   still.src = 'clips/' + CLIPS[0] + '.mp4';
   // Some WebViews only decode a frame once a clip plays.
   still.play().catch(function () {});
-  videos[0].play().catch(function () {});
   // What to show: the running clip while answering, otherwise the still.
   function source(vid) {
     if (running && vid.readyState >= 2) return vid;
     return shotTaken ? shot : vid;
   }
 
-  function report(t) {
-    try { if (window.ziggyHost) window.ziggyHost.position(t); } catch (e) { /* No plugin: a browser. */ }
-  }
-  setInterval(function () { report(videos[current].currentTime || 0); }, 500);
-  // While the assistant answers, the clip shows, wherever it has got to. Otherwise the still.
+  // While the assistant answers, the clip plays from its first frame. Otherwise the still.
   function run(on) {
     if (on === running) return;
     running = on;
@@ -230,7 +224,9 @@
     clearTimeout(lossTimer);
     if (on) {
       layout.classList.remove('still');
-      if (videos[current].paused) videos[current].play().catch(function () {});
+      var vid = videos[current];
+      try { vid.currentTime = 0; } catch (e) { /* Not loaded yet: it is at the start anyway. */ }
+      vid.play().catch(function () {});
       if (CLIPS.length > 1 && !glitching) timer = setTimeout(nextClip, INTERVAL);
       // The answer starts with a flash of static, as the picture comes to life.
       if (!glitching) staticFlash(220, null, function () { scheduleLoss(false); });
@@ -244,6 +240,7 @@
   }
   function hold() {
     layout.classList.add('still');
+    if (!running) videos[current].pause();
   }
 
   function sizeCanvases() {
