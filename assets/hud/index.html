@@ -463,9 +463,10 @@
     }
   }
 
-  // KS can report the answer as playing for a while after the voice has stopped, so the voice
-  // level decides too: once the answer has been heard, QUIET ms of silence end it, just longer
-  // than the gaps between words. If the voice comes back, the clip carries on where it stopped.
+  // The voice level decides when Pris talks, not KS's state, which can lag the voice either way
+  // on a short answer. After your command, any voice is the assistant's: it shows as answering
+  // whatever KS says, and QUIET ms of silence, just longer than the gaps between words, end it.
+  // If the voice comes back, the clip carries on where it stopped.
   var QUIET = 300, LOUD = 0.04;
   var phase = 'listening', heard = false, lastLoud = 0, quiet = false;
   // Whether you have started speaking since the wake word. The first GRACE ms after it are
@@ -475,14 +476,14 @@
   var listenSince = performance.now(), speech = 0, lastSpeech = 0;
   var updated = false;
   function showPhase() {
-    var shown = phase === 'answering' && quiet ? 'done' : phase;
+    var shown = phase !== 'listening' && heard ? (quiet ? 'done' : 'answering') : phase;
     document.getElementById('mode').textContent = MODES[shown][0];
     document.getElementById('status').textContent = MODES[shown][1];
     layout.classList.toggle('thinking', shown === 'thinking');
     play(shown);
   }
   setInterval(function () {
-    if (phase === 'answering' && heard && !quiet && performance.now() - lastLoud > QUIET) {
+    if (phase !== 'listening' && heard && !quiet && performance.now() - lastLoud > QUIET) {
       quiet = true;
       showPhase();
     }
@@ -497,7 +498,11 @@
       var next = MODES[s.phase] ? s.phase : 'listening';
       // The page opens with the wake word: the grace starts with its first update.
       if (!updated) { updated = true; listenSince = performance.now(); }
-      if (next !== phase) { heard = false; quiet = false; started = false; if (next === 'listening') { spoke = false; speech = 0; listenSince = performance.now(); lastSpeech = 0; } }
+      // A new turn starts over. Within a turn, thinking, answering and done keep what was heard.
+      if (next !== phase && next === 'listening') {
+        heard = false; quiet = false; started = false;
+        spoke = false; speech = 0; listenSince = performance.now(); lastSpeech = 0;
+      }
       phase = next;
       commanded = !!s.command;
       showPhase();
@@ -525,7 +530,7 @@
         lastSpeech = now;
         if (speech >= SPEECH) { spoke = true; showPhase(); }
       }
-      if (phase === 'answering' && target > LOUD) {
+      if (phase !== 'listening' && target > LOUD) {
         var first = !heard;
         heard = true;
         lastLoud = performance.now();
