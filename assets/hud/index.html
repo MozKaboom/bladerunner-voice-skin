@@ -464,9 +464,9 @@
   }
 
   // KS can report the answer as playing for a while after the voice has stopped, so the voice
-  // level decides too: once the answer has been heard, QUIET ms of silence end it. That is longer
-  // than the pauses between sentences. If the voice comes back, so does the clip.
-  var QUIET = 1200, LOUD = 0.04;
+  // level decides too: once the answer has been heard, QUIET ms of silence end it, just longer
+  // than the gaps between words. If the voice comes back, the clip carries on where it stopped.
+  var QUIET = 300, LOUD = 0.04;
   var phase = 'listening', heard = false, lastLoud = 0, quiet = false;
   // Whether you have started speaking since the wake word. The first GRACE ms after it are
   // ignored, for the end of the wake word and the chime, and it takes SPEECH ms of voice above
