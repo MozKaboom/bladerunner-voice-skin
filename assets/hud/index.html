@@ -523,9 +523,11 @@
       var next = MODES[s.phase] ? s.phase : 'listening';
       var sig = s.phase + ' cmd:' + (s.command ? 'Y' : 'N') + ' ans:' + (s.answer ? 'Y' : 'N') + (s.reactive === false ? ' REACTIVE OFF' : '');
       if (sig !== lastSig) { lastSig = sig; log('ks ' + sig); }
-      // KS can still say listening while a quick answer plays. Once your command or the answer
-      // is in, it is past listening, so the voice from then on is the assistant's.
-      if (next === 'listening' && (s.command || s.answer)) next = 'thinking';
+      // KS can still say listening while a quick answer starts to play. Once your command is in,
+      // it is past listening, so the voice from then on is the assistant's. An answer arriving
+      // then is a quick one, already on its way to being spoken: Pris starts talking with it.
+      if (next === 'listening' && s.answer) next = 'answering';
+      else if (next === 'listening' && s.command) next = 'thinking';
       // The page opens with the wake word: the grace starts with its first update.
       if (!updated) { updated = true; listenSince = performance.now(); }
       // A new turn starts over. Within a turn, thinking, answering and done keep what was heard.
