@@ -186,6 +186,9 @@
     return v;
   });
   var current = 0, clip = 0, running = false, timer = null, glitching = false;
+  // Whether the clip has started in this answer. If the voice pauses and carries on, the clip
+  // carries on from where it stopped, without static.
+  var started = false;
   // The clip waits on its first frame and plays from the start each time the answer does.
   videos[0].src = 'clips/' + CLIPS[0] + '.mp4';
   videos[0].preload = 'auto';
@@ -223,12 +226,15 @@
     clearTimeout(timer);
     if (on) {
       layout.classList.remove('still');
-      var vid = videos[current];
-      try { vid.currentTime = 0; } catch (e) { /* Not loaded yet: it is at the start anyway. */ }
+      var vid = videos[current], first = !started;
+      started = true;
+      if (first) {
+        try { vid.currentTime = 0; } catch (e) { /* Not loaded yet: it is at the start anyway. */ }
+      }
       vid.play().catch(function () {});
       if (CLIPS.length > 1 && !glitching) timer = setTimeout(nextClip, INTERVAL);
-      // The answer starts with a flash of static, as the picture comes to life.
-      if (!glitching) staticFlash(220, null, null);
+      // The answer starts with a burst of static, as the picture comes to life.
+      if (first && !glitching) staticFlash(220, null, null);
     } else if (!glitching) {
       // And ends with one: the dimmed still comes back behind the static.
       staticFlash(260, hold, null);
@@ -424,9 +430,9 @@
   }
 
   // KS can report the answer as playing for a while after the voice has stopped, so the voice
-  // level decides too: once the answer has been heard, QUIET ms of silence end it at once. If
-  // the voice comes back, so does the clip.
-  var QUIET = 450, LOUD = 0.04;
+  // level decides too: once the answer has been heard, QUIET ms of silence end it. That is longer
+  // than the pauses between sentences. If the voice comes back, so does the clip.
+  var QUIET = 1200, LOUD = 0.04;
   var phase = 'listening', heard = false, lastLoud = 0, quiet = false;
   function showPhase() {
     var shown = phase === 'answering' && quiet ? 'done' : phase;
@@ -449,7 +455,7 @@
       root.setProperty('--scale', Math.max(0.5, Math.min(2, Number(s.textScale) || 1)));
       root.setProperty('--backdrop', s.background == null ? 0.88 : Math.max(0, Math.min(1, Number(s.background))));
       var next = MODES[s.phase] ? s.phase : 'listening';
-      if (next !== phase) { heard = false; quiet = false; }
+      if (next !== phase) { heard = false; quiet = false; started = false; }
       phase = next;
       showPhase();
       said.textContent = s.command || '';
