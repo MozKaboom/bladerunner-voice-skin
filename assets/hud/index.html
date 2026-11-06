@@ -234,13 +234,16 @@
     return shotTaken ? shot : videos[0];
   }
 
-  // Listening and thinking, once you have spoken: the intro. Answering: the clip. Otherwise: the
-  // dimmed still. With Reactive activity bar off there is no voice level, so thinking is the cue.
+  // Once you have spoken: the intro. Once the assistant's voice is heard: the clip. Otherwise:
+  // the dimmed still. With Reactive activity bar off there is no voice level, so the assistant
+  // thinking and answering are the cues.
   function play(mode) {
-    var before = (mode === 'listening' && spoke) || (mode === 'thinking' && (spoke || !reactive));
-    if (before && introOk) { if (showing !== intro && !started) startIntro(); }
-    else if (mode === 'answering') startTalk();
-    else stop();
+    var talking = mode === 'answering' && (heard || !reactive);
+    var before = !talking && (spoke || (!reactive && mode === 'thinking')) &&
+      (mode === 'listening' || mode === 'thinking' || mode === 'answering');
+    if (talking) startTalk();
+    else if (before && introOk) { if (showing !== intro && !started) startIntro(); }
+    else if (!(before && showing === intro)) stop();
   }
   function startIntro() {
     var from = showing;
@@ -521,9 +524,10 @@
         if (speech >= SPEECH) { spoke = true; showPhase(); }
       }
       if (phase === 'answering' && target > LOUD) {
+        var first = !heard;
         heard = true;
         lastLoud = performance.now();
-        if (quiet) { quiet = false; showPhase(); }
+        if (quiet || first) { quiet = false; showPhase(); }
       }
     },
     // A burst of static now. For trying the look.

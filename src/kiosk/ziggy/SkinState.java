@@ -94,8 +94,8 @@ final class SkinState {
     /**
      * Where the turn is: listening, thinking, answering while the answer plays, or done once it
      * has played and stays on screen. The clips only run while answering. KS reports the voice
-     * state; without it, the words tell. Preview shows with no turn at all, and it answers so
-     * the whole look can be seen.
+     * state; without it, the words tell. With no words and no turn, as for Preview or before the
+     * state catches up with the wake word, it listens, so the clip never starts early.
      */
     synchronized String phase() {
         if (voice != null) {
@@ -104,7 +104,7 @@ final class SkinState {
                 case "processing": return "thinking";
                 case "listening": return "listening";
                 default:
-                    return command.isEmpty() && answer.isEmpty() && !announcement ? "answering" : "done";
+                    return command.isEmpty() && answer.isEmpty() && !announcement ? "listening" : "done";
             }
         }
         if (announcement || !answer.isEmpty()) return "answering";

@@ -84,9 +84,9 @@ public final class ZiggyTest {
         state.onEvent("ks.voice.state", map("state", "idle"));
         assert "done".equals(state.phase()) : "The answer stays on screen, still";
         state.onEvent("ks.voice.text", map());
-        assert "answering".equals(state.phase()) : "Preview: no turn, the whole look shows";
-        state.readState(map("state", "listening"));
-        assert "answering".equals(state.phase()) : "An event beats the read";
+        assert "listening".equals(state.phase()) : "No turn: the still, so the clip never starts early";
+        state.readState(map("state", "responding"));
+        assert "listening".equals(state.phase()) : "An event beats the read";
         state.reset();
         assert state.drawn() == null && "listening".equals(state.phase()) && state.level() == 0f;
 
