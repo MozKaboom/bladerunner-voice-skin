@@ -235,12 +235,13 @@
   }
 
   // Once you have spoken: the intro. Once the assistant's voice is heard: the clip. Otherwise:
-  // the dimmed still. With Reactive activity bar off there is no voice level, so the assistant
-  // thinking and answering are the cues.
+  // the dimmed still. Your voice may be too quiet to tell, so your command arriving counts too:
+  // the assistant thinking about something you said. With Reactive activity bar off there is no
+  // voice level, so the assistant thinking and answering are the cues.
   function play(mode) {
     var talking = mode === 'answering' && (heard || !reactive);
-    var before = !talking && (spoke || (!reactive && mode === 'thinking')) &&
-      (mode === 'listening' || mode === 'thinking' || mode === 'answering');
+    var gave = spoke || commanded || !reactive;
+    var before = !talking && (mode === 'listening' ? spoke : (mode === 'thinking' || mode === 'answering') && gave);
     if (talking) startTalk();
     else if (before && introOk) { if (showing !== intro && !started) startIntro(); }
     else if (!(before && showing === intro)) stop();
@@ -470,7 +471,7 @@
   // Whether you have started speaking since the wake word. The first GRACE ms after it are
   // ignored, for the end of the wake word and the chime, and it takes SPEECH ms of voice above
   // SPEAK, so a cough or background noise doesn't count.
-  var spoke = false, GRACE = 1000, SPEECH = 500, SPEAK = 0.1;
+  var spoke = false, commanded = false, GRACE = 1000, SPEECH = 300, SPEAK = 0.06;
   var listenSince = performance.now(), speech = 0, lastSpeech = 0;
   var updated = false;
   function showPhase() {
@@ -498,6 +499,7 @@
       if (!updated) { updated = true; listenSince = performance.now(); }
       if (next !== phase) { heard = false; quiet = false; started = false; if (next === 'listening') { spoke = false; speech = 0; listenSince = performance.now(); lastSpeech = 0; } }
       phase = next;
+      commanded = !!s.command;
       showPhase();
       said.textContent = s.command || '';
       said.hidden = !s.command;
@@ -519,7 +521,7 @@
       if (phase === 'listening' && !spoke && target > SPEAK && now - listenSince > GRACE) {
         // Readings come about 30 times a second while the voice changes: count the time between
         // loud ones that are close together.
-        if (lastSpeech && now - lastSpeech < 200) speech += now - lastSpeech;
+        if (lastSpeech && now - lastSpeech < 400) speech += now - lastSpeech;
         lastSpeech = now;
         if (speech >= SPEECH) { spoke = true; showPhase(); }
       }
