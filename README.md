@@ -1,8 +1,8 @@
 # Bladerunner visualiser
 
-A [Kiosk Satellite](https://kiosksatellite.com) voice skin. When you talk to the assistant, a glowing green HUD appears over animated artwork of Pris, the replicant from Blade Runner, against a black and white city skyline. Its rings pulse with your voice and the answer, race while the assistant thinks, and what you said and the answer appear beside it in terminal type as they arrive.
+A [Kiosk Satellite](https://kiosksatellite.com) voice skin. When you talk to the assistant, a glowing green HUD appears over animated artwork of Pris, the replicant from Blade Runner, against a neon city at night. She waits while you wake the assistant, thinks while you give your command and talks while the assistant answers. The HUD's rings pulse with the voice and race while the assistant thinks, and what you said and the answer appear beside it in terminal type as they arrive.
 
-![Bladerunner visualiser answering a question: a round HUD of green rings over black and white artwork of Pris, with the question and answer beside it](https://raw.githubusercontent.com/MozKaboom/bladerunner-voice-skin/main/assets/voice-skin.webp)
+![Bladerunner visualiser answering a question: a round HUD of green rings over colour artwork of Pris against a neon city, with the question and answer beside it](https://raw.githubusercontent.com/MozKaboom/bladerunner-voice-skin/main/assets/voice-skin.webp)
 
 ## Installation
 
@@ -31,7 +31,15 @@ It has two looks, one for each **Overlay mode**:
 - **Full screen:** the conversation on the left and the HUD on the right in landscape, above it in portrait, over a dark backdrop.
 - **Docked:** a bar at the bottom of the screen with a small HUD and the latest words. The dashboard stays in view and usable.
 
-While you speak and while the assistant thinks, the HUD holds a dimmed still of the artwork. If the plugin has an intro clip, `clips/pris-intro.mp4`, it plays once from when you start giving your command, after a burst of static. The wake word itself, short noises and background sound don't start it. The moment the answer starts, the Pris clip takes over, so Pris always talks with the voice. If the intro hadn't finished, another burst of static covers the cut. When the assistant starts speaking its answer, a burst of static breaks the still, and the artwork comes back bright with the Pris clip playing from the start, looping if the answer runs longer. As soon as the voice stops, it cuts back to the dimmed still, and the words stay on screen. If the voice comes back, the clip carries on from where it stopped. With **Reactive activity bar** off there is no voice level to follow, so the still comes back when Kiosk Satellite says the answer has finished. Its panels show the voice level and whether Pris is listening, thinking or responding. While the answer is still arriving, a cursor blinks after it. If the assistant took actions and **Show tool use** is on, the last three appear under the answer.
+Each turn plays out in three parts:
+
+- **Wake word:** the HUD holds a dimmed still of Pris. The wake word itself, short noises and background sound leave it there.
+- **Your command:** as soon as you start speaking, a burst of static breaks the still and Pris plays her intro, a finger to her lips as she thinks. If your voice is too quiet to pick up, the intro starts when your command reaches the assistant.
+- **The answer:** the moment the assistant starts to answer, Pris starts talking, looping if the answer runs on. If the intro hadn't finished, another burst of static covers the cut. As soon as the voice stops, she cuts back to the dimmed still and the words stay on screen. If the voice comes back after a pause, she carries on from where she stopped.
+
+With **Reactive activity bar** off there is no voice level to follow, so the intro starts when the assistant starts thinking, and the still comes back when Kiosk Satellite says the answer has finished.
+
+Its panels show the voice level and whether Pris is listening, thinking or responding. While the answer is still arriving, a cursor blinks after it. If the assistant took actions and **Show tool use** is on, the last three appear under the answer.
 
 It follows these **Voice Satellite > Appearance** settings:
 
@@ -58,7 +66,7 @@ To try the page on a computer, serve `assets/hud` with any web server and open `
 
 ## Credits
 
-- The Pris clip is original AI-generated fan artwork by MozKaboom.
+- The Pris clips are original AI-generated fan artwork by MozKaboom.
 - The [Orbitron](https://github.com/theleagueof/orbitron) and [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) fonts are included under the SIL Open Font License. The licence texts are in `assets/hud/fonts`.
 
 Bladerunner visualiser is fan art. It is not affiliated with or endorsed by the makers or owners of Blade Runner.
