@@ -168,6 +168,21 @@
 (function () {
   'use strict';
   var params = new URLSearchParams(location.search);
+  // For testing on a kiosk: a log of what the page is told and shows, on screen.
+  var DEBUG = false || params.has('debug');
+  var logBox = null, logLines = [], logStart = performance.now();
+  function log(msg) {
+    if (!DEBUG) return;
+    if (!logBox) {
+      logBox = document.createElement('pre');
+      logBox.style.cssText = 'position:fixed;left:6px;top:6px;z-index:99;margin:0;padding:6px 8px;max-width:60vw;' +
+        'font:12px/1.35 monospace;color:#ff0;background:rgba(0,0,0,0.8);pointer-events:none;white-space:pre-wrap';
+      document.body.appendChild(logBox);
+    }
+    logLines.push(((performance.now() - logStart) / 1000).toFixed(2) + ' ' + msg);
+    if (logLines.length > 26) logLines.shift();
+    logBox.textContent = logLines.join(String.fromCharCode(10));
+  }
   var mode = params.get('mode') === 'docked' ? 'docked' : 'full';
   var root = document.documentElement.style;
   var layout = document.getElementById('layout');
@@ -198,7 +213,8 @@
   // with the voice. If the intro had not finished, a burst of static covers the cut.
   var intro = document.createElement('video'), introOk = true;
   intro.muted = true; intro.playsInline = true; intro.setAttribute('playsinline', ''); intro.preload = 'auto';
-  intro.addEventListener('error', function () { introOk = false; if (showing === intro) startTalk(); });
+  intro.addEventListener('error', function () { log('intro error'); introOk = false; if (showing === intro) startTalk(); });
+  intro.addEventListener('ended', function () { log('intro ended'); });
   intro.src = 'clips/' + CLIPS[0] + '-intro.mp4';
   // The video being shown, or null for the still.
   var showing = null;
@@ -247,6 +263,7 @@
     else if (!(before && showing === intro)) stop();
   }
   function startIntro() {
+    log('SHOW intro');
     var from = showing;
     showing = intro; running = true;
     try { intro.currentTime = 0; } catch (e) { /* Not loaded yet: it is at the start anyway. */ }
@@ -257,6 +274,7 @@
   }
   function startTalk() {
     if (showing === videos[current]) return;
+    log('SHOW main');
     var from = showing, vid = videos[current], first = !started;
     var cut = from === intro && !intro.ended;
     started = true;
@@ -273,6 +291,7 @@
   }
   function stop() {
     if (!showing) return;
+    log('SHOW still');
     showing = null; running = false;
     clearTimeout(timer);
     // The dimmed still comes straight back.
@@ -475,6 +494,10 @@
   var spoke = false, commanded = false, GRACE = 1000, SPEECH = 300, SPEAK = 0.06;
   var listenSince = performance.now(), speech = 0, lastSpeech = 0;
   var updated = false;
+  var lastSig = '', wasLoud = false, peak = 0, lastLoudAny = 0;
+  if (DEBUG) setInterval(function () {
+    if (wasLoud && performance.now() - lastLoudAny > 250) { wasLoud = false; log('voice off, peak ' + peak.toFixed(2)); }
+  }, 50);
   function showPhase() {
     var shown = phase !== 'listening' && heard ? (quiet ? 'done' : 'answering') : phase;
     document.getElementById('mode').textContent = MODES[shown][0];
@@ -496,6 +519,8 @@
       root.setProperty('--scale', Math.max(0.5, Math.min(2, Number(s.textScale) || 1)));
       root.setProperty('--backdrop', s.background == null ? 0.88 : Math.max(0, Math.min(1, Number(s.background))));
       var next = MODES[s.phase] ? s.phase : 'listening';
+      var sig = s.phase + ' cmd:' + (s.command ? 'Y' : 'N') + ' ans:' + (s.answer ? 'Y' : 'N') + (s.reactive === false ? ' REACTIVE OFF' : '');
+      if (sig !== lastSig) { lastSig = sig; log('ks ' + sig); }
       // KS can still say listening while a quick answer plays. Once your command or the answer
       // is in, it is past listening, so the voice from then on is the assistant's.
       if (next === 'listening' && (s.command || s.answer)) next = 'thinking';
@@ -525,13 +550,20 @@
     },
     level: function (value) {
       target = Math.max(0, Math.min(1, Number(value) || 0));
+      if (DEBUG) {
+        if (target > LOUD) {
+          lastLoudAny = performance.now();
+          if (!wasLoud) { wasLoud = true; peak = 0; log('voice ON (' + phase + ')'); }
+          if (target > peak) peak = target;
+        }
+      }
       var now = performance.now();
       if (phase === 'listening' && !spoke && target > SPEAK && now - listenSince > GRACE) {
         // Readings come about 30 times a second while the voice changes: count the time between
         // loud ones that are close together.
         if (lastSpeech && now - lastSpeech < 400) speech += now - lastSpeech;
         lastSpeech = now;
-        if (speech >= SPEECH) { spoke = true; showPhase(); }
+        if (speech >= SPEECH) { spoke = true; log('you spoke'); showPhase(); }
       }
       if (phase !== 'listening' && target > LOUD) {
         var first = !heard;
