@@ -221,7 +221,6 @@
     if (on === running) return;
     running = on;
     clearTimeout(timer);
-    clearTimeout(lossTimer);
     if (on) {
       layout.classList.remove('still');
       var vid = videos[current];
@@ -229,8 +228,7 @@
       vid.play().catch(function () {});
       if (CLIPS.length > 1 && !glitching) timer = setTimeout(nextClip, INTERVAL);
       // The answer starts with a flash of static, as the picture comes to life.
-      if (!glitching) staticFlash(220, null, function () { scheduleLoss(false); });
-      else scheduleLoss(true);
+      if (!glitching) staticFlash(220, null, null);
     } else if (!glitching) {
       // And ends with one: the dimmed still comes back behind the static.
       staticFlash(260, hold, null);
@@ -264,8 +262,6 @@
     requestAnimationFrame(loop);
     if (glitch.style.display === 'block') return;
     paint(ctx, source(videos[current]), canvas.width, canvas.height);
-    // While the clip plays, a faint grain of static never quite leaves it.
-    if (running) snowFill(ctx, canvas.width, canvas.height, 0.07 + Math.random() * 0.05);
   })();
 
   // The glitch only copies pixels with drawImage, never reads them, so it works however the
@@ -336,7 +332,6 @@
   }
 
   // Signal loss: while the clip plays, now and then a brief flash of static covers it.
-  var lossTimer = null;
   // TV snow: a few tiles of random grey pixels, drawn at random offsets so it never repeats.
   var SNOW = 160;
   var snow = [0, 1, 2, 3].map(function () {
@@ -360,24 +355,6 @@
     c.globalAlpha = Math.min(1, alpha);
     for (var x = -ox; x < W; x += SNOW) for (var y = -oy; y < H; y += SNOW) c.drawImage(tile, x, y);
     c.globalAlpha = 1;
-  }
-  function scheduleLoss(first) {
-    clearTimeout(lossTimer);
-    if (!running) return;
-    lossTimer = setTimeout(signalLoss, first ? 500 + Math.random() * 800 : 900 + Math.random() * 2100);
-  }
-  function signalLoss() {
-    if (!running) return;
-    if (glitching || flashing) { scheduleLoss(false); return; }
-    // Now and then the signal stutters: a second, shorter flash right after the first.
-    var stutter = Math.random() < 0.35;
-    staticFlash(90 + Math.random() * 130, null, function () {
-      if (!stutter || !running) { scheduleLoss(false); return; }
-      lossTimer = setTimeout(function () {
-        if (!running || glitching || flashing) { scheduleLoss(false); return; }
-        staticFlash(50 + Math.random() * 70, null, function () { scheduleLoss(false); });
-      }, 40 + Math.random() * 80);
-    });
   }
   // Full static, then the picture shows back through it. Midway, while the static hides the
   // picture, mid() can change it. A new flash takes over from one still running.
@@ -497,10 +474,9 @@
         if (quiet) { quiet = false; showPhase(); }
       }
     },
-    // Breaks up the picture now, if the clip is playing. For trying the look.
+    // A burst of static now. For trying the look.
     glitch: function () {
-      clearTimeout(lossTimer);
-      signalLoss();
+      staticFlash(220, null, null);
     }
   };
 
