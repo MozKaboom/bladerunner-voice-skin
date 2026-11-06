@@ -496,6 +496,9 @@
       root.setProperty('--scale', Math.max(0.5, Math.min(2, Number(s.textScale) || 1)));
       root.setProperty('--backdrop', s.background == null ? 0.88 : Math.max(0, Math.min(1, Number(s.background))));
       var next = MODES[s.phase] ? s.phase : 'listening';
+      // KS can still say listening while a quick answer plays. Once your command or the answer
+      // is in, it is past listening, so the voice from then on is the assistant's.
+      if (next === 'listening' && (s.command || s.answer)) next = 'thinking';
       // The page opens with the wake word: the grace starts with its first update.
       if (!updated) { updated = true; listenSince = performance.now(); }
       // A new turn starts over. Within a turn, thinking, answering and done keep what was heard.
