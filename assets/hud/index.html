@@ -234,10 +234,10 @@
     return shotTaken ? shot : videos[0];
   }
 
-  // Listening, once you speak, and thinking: the intro. Answering: the clip. Otherwise: the
-  // dimmed still.
+  // Listening and thinking, once you have spoken: the intro. Answering: the clip. Otherwise: the
+  // dimmed still. With Reactive activity bar off there is no voice level, so thinking is the cue.
   function play(mode) {
-    var before = (mode === 'listening' && spoke) || mode === 'thinking';
+    var before = (mode === 'listening' && spoke) || (mode === 'thinking' && (spoke || !reactive));
     if (before && introOk) { if (showing !== intro && !started) startIntro(); }
     else if (mode === 'answering') startTalk();
     else stop();
@@ -464,8 +464,12 @@
   // than the pauses between sentences. If the voice comes back, so does the clip.
   var QUIET = 1200, LOUD = 0.04;
   var phase = 'listening', heard = false, lastLoud = 0, quiet = false;
-  // Whether you have started speaking since the wake word.
-  var spoke = false;
+  // Whether you have started speaking since the wake word. The first GRACE ms after it are
+  // ignored, for the end of the wake word and the chime, and it takes SPEECH ms of voice above
+  // SPEAK, so a cough or background noise doesn't count.
+  var spoke = false, GRACE = 1000, SPEECH = 500, SPEAK = 0.1;
+  var listenSince = performance.now(), speech = 0, lastSpeech = 0;
+  var updated = false;
   function showPhase() {
     var shown = phase === 'answering' && quiet ? 'done' : phase;
     document.getElementById('mode').textContent = MODES[shown][0];
@@ -487,7 +491,9 @@
       root.setProperty('--scale', Math.max(0.5, Math.min(2, Number(s.textScale) || 1)));
       root.setProperty('--backdrop', s.background == null ? 0.88 : Math.max(0, Math.min(1, Number(s.background))));
       var next = MODES[s.phase] ? s.phase : 'listening';
-      if (next !== phase) { heard = false; quiet = false; started = false; if (next === 'listening') spoke = false; }
+      // The page opens with the wake word: the grace starts with its first update.
+      if (!updated) { updated = true; listenSince = performance.now(); }
+      if (next !== phase) { heard = false; quiet = false; started = false; if (next === 'listening') { spoke = false; speech = 0; listenSince = performance.now(); lastSpeech = 0; } }
       phase = next;
       showPhase();
       said.textContent = s.command || '';
@@ -506,9 +512,13 @@
     },
     level: function (value) {
       target = Math.max(0, Math.min(1, Number(value) || 0));
-      if (phase === 'listening' && !spoke && target > LOUD) {
-        spoke = true;
-        showPhase();
+      var now = performance.now();
+      if (phase === 'listening' && !spoke && target > SPEAK && now - listenSince > GRACE) {
+        // Readings come about 30 times a second while the voice changes: count the time between
+        // loud ones that are close together.
+        if (lastSpeech && now - lastSpeech < 200) speech += now - lastSpeech;
+        lastSpeech = now;
+        if (speech >= SPEECH) { spoke = true; showPhase(); }
       }
       if (phase === 'answering' && target > LOUD) {
         heard = true;
