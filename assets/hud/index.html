@@ -255,7 +255,9 @@
   // the assistant thinking about something you said. With Reactive activity bar off there is no
   // voice level, so the assistant thinking and answering are the cues.
   function play(mode) {
-    var talking = mode === 'answering' && (heard || !reactive);
+    // KS saying answering after your command is the earliest cue: the voice level comes through
+    // most of a second later. Without your command, as at the wake word, wait for the voice.
+    var talking = mode === 'answering' && (heard || commanded || !reactive);
     var gave = spoke || commanded || !reactive;
     var before = !talking && (mode === 'listening' ? spoke : (mode === 'thinking' || mode === 'answering') && gave);
     if (talking) startTalk();
@@ -486,7 +488,7 @@
   // on a short answer. After your command, any voice is the assistant's: it shows as answering
   // whatever KS says, and QUIET ms of silence, just longer than the gaps between words, end it.
   // If the voice comes back, the clip carries on where it stopped.
-  var QUIET = 300, LOUD = 0.04;
+  var QUIET = 450, LOUD = 0.04;
   var phase = 'listening', heard = false, lastLoud = 0, quiet = false;
   // Whether you have started speaking since the wake word. The first GRACE ms after it are
   // ignored, for the end of the wake word and the chime, and it takes SPEECH ms of voice above
