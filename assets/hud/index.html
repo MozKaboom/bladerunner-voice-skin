@@ -193,9 +193,19 @@
   videos[0].src = 'clips/' + CLIPS[0] + '.mp4';
   videos[0].preload = 'auto';
   layout.classList.add('still');
-  // The still is a copy of the first frame, from a second copy of the clip that is let go once
-  // it has been taken. While the clip gets going, the still is what shows, so it starts on the
-  // same picture.
+  // An optional intro, clips/<clip>-intro.mp4, plays once while the assistant thinks, before it
+  // speaks. If the answer comes before the intro ends, the intro finishes first and the clip
+  // follows on from it.
+  var intro = document.createElement('video'), introOk = true, introDone = false, wantTalk = false;
+  intro.muted = true; intro.playsInline = true; intro.setAttribute('playsinline', ''); intro.preload = 'auto';
+  intro.addEventListener('error', function () { introOk = false; if (showing === intro) startTalk(); });
+  intro.addEventListener('ended', function () { introDone = true; if (wantTalk && showing === intro) startTalk(); });
+  intro.src = 'clips/' + CLIPS[0] + '-intro.mp4';
+  // The video being shown, or null for the still.
+  var showing = null;
+  // The still is a copy of the first frame, from the intro if there is one, otherwise the clip,
+  // taken from another copy that is let go once it has been taken. While a video gets going,
+  // the still is what shows.
   var shot = document.createElement('canvas'), shotTaken = false;
   function takeShot(v) {
     if (shotTaken || v.readyState < 2 || !v.videoWidth) return;
@@ -210,39 +220,61 @@
     if (!shotTaken) return;
     still.pause(); still.removeAttribute('src'); still.load();
   });
-  still.src = 'clips/' + CLIPS[0] + '.mp4';
+  still.addEventListener('error', function () {
+    if (shotTaken || still.dataset.fallback) return;
+    still.dataset.fallback = '1';
+    still.src = 'clips/' + CLIPS[0] + '.mp4';
+    still.play().catch(function () {});
+  });
+  still.src = 'clips/' + CLIPS[0] + '-intro.mp4';
   // Some WebViews only decode a frame once a clip plays.
   still.play().catch(function () {});
-  // What to show: the running clip while answering, otherwise the still.
-  function source(vid) {
-    if (running && vid.readyState >= 2) return vid;
-    return shotTaken ? shot : vid;
+  // What to show: the playing video once it has a frame, otherwise the still.
+  function source() {
+    if (showing && showing.readyState >= 2) return showing;
+    return shotTaken ? shot : videos[0];
   }
 
-  // While the assistant answers, the clip plays from its first frame. Otherwise the still.
-  function run(on) {
-    if (on === running) return;
-    running = on;
-    clearTimeout(timer);
-    if (on) {
-      layout.classList.remove('still');
-      var vid = videos[current], first = !started;
-      started = true;
-      if (first) {
-        try { vid.currentTime = 0; } catch (e) { /* Not loaded yet: it is at the start anyway. */ }
-      }
-      vid.play().catch(function () {});
-      if (CLIPS.length > 1 && !glitching) timer = setTimeout(nextClip, INTERVAL);
-      // The answer starts with a burst of static, as the picture comes to life.
-      if (first && !glitching) staticFlash(220, null, null);
-    } else {
-      // When it ends, the dimmed still comes straight back.
-      hold();
-    }
+  // Thinking: the intro. Answering: the clip, after the intro if it is still playing.
+  // Otherwise: the dimmed still.
+  function play(mode) {
+    if (mode === 'thinking' && introOk && showing !== intro && !started) startIntro();
+    else if (mode === 'answering') {
+      if (showing === intro && introOk && !introDone) wantTalk = true;
+      else startTalk();
+    } else if (mode !== 'thinking' || showing !== intro) stop();
   }
-  function hold() {
+  function startIntro() {
+    var from = showing;
+    showing = intro; running = true; introDone = false; wantTalk = false;
+    try { intro.currentTime = 0; } catch (e) { /* Not loaded yet: it is at the start anyway. */ }
+    intro.play().catch(function () {});
+    layout.classList.remove('still');
+    // The picture comes to life with a burst of static.
+    if (!from && !glitching) staticFlash(220, null, null);
+  }
+  function startTalk() {
+    if (showing === videos[current]) return;
+    var from = showing, vid = videos[current], first = !started;
+    started = true; wantTalk = false;
+    if (first) {
+      try { vid.currentTime = 0; } catch (e) { /* Not loaded yet: it is at the start anyway. */ }
+    }
+    vid.play().catch(function () {});
+    showing = vid; running = true;
+    intro.pause();
+    layout.classList.remove('still');
+    // From the intro it follows straight on. From the still it starts with a burst of static.
+    if (first && !from && !glitching) staticFlash(220, null, null);
+  }
+  function stop() {
+    if (!showing) return;
+    showing = null; running = false; wantTalk = false;
+    clearTimeout(timer);
+    // The dimmed still comes straight back.
     layout.classList.add('still');
-    if (!running) videos[current].pause();
+    videos[current].pause();
+    intro.pause();
   }
 
   function sizeCanvases() {
@@ -265,7 +297,7 @@
   (function loop() {
     requestAnimationFrame(loop);
     if (glitch.style.display === 'block') return;
-    paint(ctx, source(videos[current]), canvas.width, canvas.height);
+    paint(ctx, source(), canvas.width, canvas.height);
   })();
 
   // The glitch only copies pixels with drawImage, never reads them, so it works however the
@@ -373,7 +405,7 @@
       var t = now - start, p = Math.min(1, t / length);
       if (mid && p >= 0.5) { mid(); mid = null; }
       try {
-        paint(gctx, source(videos[current]), W, H);
+        paint(gctx, source(), W, H);
         snowFill(gctx, W, H, p < 0.6 ? 0.92 : 0.92 * (1 - (p - 0.6) / 0.4));
       } catch (e) { /* A frame that fails only skips its effect. */ }
       if (t < length) { requestAnimationFrame(frame); return; }
@@ -437,7 +469,7 @@
     document.getElementById('mode').textContent = MODES[shown][0];
     document.getElementById('status').textContent = MODES[shown][1];
     layout.classList.toggle('thinking', shown === 'thinking');
-    run(shown === 'answering');
+    play(shown);
   }
   setInterval(function () {
     if (phase === 'answering' && heard && !quiet && performance.now() - lastLoud > QUIET) {
