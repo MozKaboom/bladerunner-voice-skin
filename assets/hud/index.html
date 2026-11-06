@@ -235,10 +235,8 @@
       if (CLIPS.length > 1 && !glitching) timer = setTimeout(nextClip, INTERVAL);
       // The answer starts with a burst of static, as the picture comes to life.
       if (first && !glitching) staticFlash(220, null, null);
-    } else if (!glitching) {
-      // And ends with one: the dimmed still comes back behind the static.
-      staticFlash(260, hold, null);
     } else {
+      // When it ends, the dimmed still comes straight back.
       hold();
     }
   }
