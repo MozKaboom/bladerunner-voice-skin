@@ -193,13 +193,12 @@
   videos[0].src = 'clips/' + CLIPS[0] + '.mp4';
   videos[0].preload = 'auto';
   layout.classList.add('still');
-  // An optional intro, clips/<clip>-intro.mp4, plays once while the assistant thinks, before it
-  // speaks. If the answer comes before the intro ends, the intro finishes first and the clip
-  // follows on from it.
-  var intro = document.createElement('video'), introOk = true, introDone = false, wantTalk = false;
+  // An optional intro, clips/<clip>-intro.mp4, plays once from the wake word, while you speak and
+  // the assistant thinks. The moment the answer starts, the clip takes over, so Pris always talks
+  // with the voice. If the intro had not finished, a burst of static covers the cut.
+  var intro = document.createElement('video'), introOk = true;
   intro.muted = true; intro.playsInline = true; intro.setAttribute('playsinline', ''); intro.preload = 'auto';
   intro.addEventListener('error', function () { introOk = false; if (showing === intro) startTalk(); });
-  intro.addEventListener('ended', function () { introDone = true; if (wantTalk && showing === intro) startTalk(); });
   intro.src = 'clips/' + CLIPS[0] + '-intro.mp4';
   // The video being shown, or null for the still.
   var showing = null;
@@ -235,18 +234,16 @@
     return shotTaken ? shot : videos[0];
   }
 
-  // Thinking: the intro. Answering: the clip, after the intro if it is still playing.
-  // Otherwise: the dimmed still.
+  // Listening and thinking: the intro. Answering: the clip. Otherwise: the dimmed still.
   function play(mode) {
-    if (mode === 'thinking' && introOk && showing !== intro && !started) startIntro();
-    else if (mode === 'answering') {
-      if (showing === intro && introOk && !introDone) wantTalk = true;
-      else startTalk();
-    } else if (mode !== 'thinking' || showing !== intro) stop();
+    var before = mode === 'listening' || mode === 'thinking';
+    if (before && introOk) { if (showing !== intro && !started) startIntro(); }
+    else if (mode === 'answering') startTalk();
+    else stop();
   }
   function startIntro() {
     var from = showing;
-    showing = intro; running = true; introDone = false; wantTalk = false;
+    showing = intro; running = true;
     try { intro.currentTime = 0; } catch (e) { /* Not loaded yet: it is at the start anyway. */ }
     intro.play().catch(function () {});
     layout.classList.remove('still');
@@ -256,7 +253,8 @@
   function startTalk() {
     if (showing === videos[current]) return;
     var from = showing, vid = videos[current], first = !started;
-    started = true; wantTalk = false;
+    var cut = from === intro && !intro.ended;
+    started = true;
     if (first) {
       try { vid.currentTime = 0; } catch (e) { /* Not loaded yet: it is at the start anyway. */ }
     }
@@ -264,12 +262,13 @@
     showing = vid; running = true;
     intro.pause();
     layout.classList.remove('still');
-    // From the intro it follows straight on. From the still it starts with a burst of static.
-    if (first && !from && !glitching) staticFlash(220, null, null);
+    // From the end of the intro it follows straight on. From the still, or cutting the intro
+    // short, it starts with a burst of static.
+    if (first && (!from || cut) && !glitching) staticFlash(220, null, null);
   }
   function stop() {
     if (!showing) return;
-    showing = null; running = false; wantTalk = false;
+    showing = null; running = false;
     clearTimeout(timer);
     // The dimmed still comes straight back.
     layout.classList.add('still');
