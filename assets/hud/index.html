@@ -193,8 +193,8 @@
   videos[0].src = 'clips/' + CLIPS[0] + '.mp4';
   videos[0].preload = 'auto';
   layout.classList.add('still');
-  // An optional intro, clips/<clip>-intro.mp4, plays once from the wake word, while you speak and
-  // the assistant thinks. The moment the answer starts, the clip takes over, so Pris always talks
+  // An optional intro, clips/<clip>-intro.mp4, plays once from when you start speaking, through
+  // the assistant thinking. Until then the still shows. The moment the answer starts, the clip takes over, so Pris always talks
   // with the voice. If the intro had not finished, a burst of static covers the cut.
   var intro = document.createElement('video'), introOk = true;
   intro.muted = true; intro.playsInline = true; intro.setAttribute('playsinline', ''); intro.preload = 'auto';
@@ -234,9 +234,10 @@
     return shotTaken ? shot : videos[0];
   }
 
-  // Listening and thinking: the intro. Answering: the clip. Otherwise: the dimmed still.
+  // Listening, once you speak, and thinking: the intro. Answering: the clip. Otherwise: the
+  // dimmed still.
   function play(mode) {
-    var before = mode === 'listening' || mode === 'thinking';
+    var before = (mode === 'listening' && spoke) || mode === 'thinking';
     if (before && introOk) { if (showing !== intro && !started) startIntro(); }
     else if (mode === 'answering') startTalk();
     else stop();
@@ -463,6 +464,8 @@
   // than the pauses between sentences. If the voice comes back, so does the clip.
   var QUIET = 1200, LOUD = 0.04;
   var phase = 'listening', heard = false, lastLoud = 0, quiet = false;
+  // Whether you have started speaking since the wake word.
+  var spoke = false;
   function showPhase() {
     var shown = phase === 'answering' && quiet ? 'done' : phase;
     document.getElementById('mode').textContent = MODES[shown][0];
@@ -484,7 +487,7 @@
       root.setProperty('--scale', Math.max(0.5, Math.min(2, Number(s.textScale) || 1)));
       root.setProperty('--backdrop', s.background == null ? 0.88 : Math.max(0, Math.min(1, Number(s.background))));
       var next = MODES[s.phase] ? s.phase : 'listening';
-      if (next !== phase) { heard = false; quiet = false; started = false; }
+      if (next !== phase) { heard = false; quiet = false; started = false; if (next === 'listening') spoke = false; }
       phase = next;
       showPhase();
       said.textContent = s.command || '';
@@ -503,6 +506,10 @@
     },
     level: function (value) {
       target = Math.max(0, Math.min(1, Number(value) || 0));
+      if (phase === 'listening' && !spoke && target > LOUD) {
+        spoke = true;
+        showPhase();
+      }
       if (phase === 'answering' && target > LOUD) {
         heard = true;
         lastLoud = performance.now();
